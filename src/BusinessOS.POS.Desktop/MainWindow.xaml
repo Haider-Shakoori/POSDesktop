@@ -8,7 +8,8 @@
         MinHeight="720"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource AppBackgroundBrush}"
-        FontFamily="Segoe UI">
+        FontFamily="Segoe UI"
+        FlowDirection="{Binding FlowDirection}">
     <Window.Resources>
         <DataTemplate x:Key="DashboardTemplate">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
@@ -158,6 +159,7 @@
                             <Setter Property="Padding" Value="0" />
                             <Setter Property="Margin" Value="0,2" />
                             <Setter Property="Background" Value="Transparent" />
+                            <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
                             <Setter Property="BorderBrush" Value="Transparent" />
                             <Setter Property="BorderThickness" Value="1" />
                             <Setter Property="Template">
@@ -178,6 +180,7 @@
                                             <Trigger Property="IsSelected" Value="True">
                                                 <Setter TargetName="Root" Property="Background" Value="{DynamicResource SidebarItemSelectedBrush}" />
                                                 <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource SidebarItemSelectedBorderBrush}" />
+                                                <Setter Property="Foreground" Value="{DynamicResource SidebarItemSelectedForegroundBrush}" />
                                             </Trigger>
                                         </ControlTemplate.Triggers>
                                     </ControlTemplate>
@@ -195,13 +198,13 @@
                                 <TextBlock Text="{Binding Glyph}"
                                            FontFamily="Segoe Fluent Icons"
                                            FontSize="17"
-                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
                                            VerticalAlignment="Center" />
                                 <TextBlock Grid.Column="1"
                                            Text="{Binding Title}"
                                            FontSize="12.5"
                                            FontWeight="SemiBold"
-                                           Foreground="{DynamicResource TextPrimaryBrush}"
+                                           Foreground="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ListBoxItem}}"
                                            VerticalAlignment="Center" />
                             </Grid>
                         </DataTemplate>
@@ -237,7 +240,17 @@
                         <ComboBox ItemsSource="{Binding Themes}"
                                   SelectedItem="{Binding SelectedTheme}"
                                   MinWidth="104"
+                                  Margin="0,0,14,0"
                                   ToolTip="Appearance theme" />
+                        <TextBlock Text="{Binding CurrentUserDisplay}"
+                                   VerticalAlignment="Center"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   FontWeight="SemiBold"
+                                   Margin="0,0,12,0" />
+                        <Button Content="Sign out"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                MinWidth="82"
+                                Click="OnSignOutClick" />
                     </StackPanel>
                 </Grid>
             </Border>

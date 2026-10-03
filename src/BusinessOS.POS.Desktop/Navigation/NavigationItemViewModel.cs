@@ -4,4 +4,5 @@ public sealed record NavigationItemViewModel(
     string Key,
     string Glyph,
     string Title,
-    string Subtitle);
+    string Subtitle,
+    string? RequiredPermission = null);
