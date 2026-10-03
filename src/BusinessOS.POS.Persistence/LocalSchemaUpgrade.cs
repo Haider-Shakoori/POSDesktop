@@ -922,6 +922,35 @@ SET ExpectedCash = COALESCE((
 ), OpeningCash);
 """, cancellationToken);
 
+        await EnsureColumnAsync(context, "sales", "BusinessDate", "TEXT NOT NULL DEFAULT '0001-01-01 00:00:00'", cancellationToken);
+        await EnsureColumnAsync(context, "sale_returns", "BusinessDate", "TEXT NOT NULL DEFAULT '0001-01-01 00:00:00'", cancellationToken);
+        await EnsureColumnAsync(context, "customer_collections", "BusinessDate", "TEXT NOT NULL DEFAULT '0001-01-01 00:00:00'", cancellationToken);
+        await EnsureColumnAsync(context, "goods_receipts", "BusinessDate", "TEXT NOT NULL DEFAULT '0001-01-01 00:00:00'", cancellationToken);
+        await EnsureColumnAsync(context, "purchase_returns", "BusinessDate", "TEXT NOT NULL DEFAULT '0001-01-01 00:00:00'", cancellationToken);
+        await EnsureColumnAsync(context, "purchase_payments", "BusinessDate", "TEXT NOT NULL DEFAULT '0001-01-01 00:00:00'", cancellationToken);
+        await EnsureColumnAsync(context, "supplier_payments", "BusinessDate", "TEXT NOT NULL DEFAULT '0001-01-01 00:00:00'", cancellationToken);
+        await EnsureColumnAsync(context, "operating_entries", "BusinessDate", "TEXT NOT NULL DEFAULT '0001-01-01 00:00:00'", cancellationToken);
+
+        await context.Database.ExecuteSqlRawAsync("""
+UPDATE sales SET BusinessDate = substr(SoldAt, 1, 10) || ' 00:00:00' WHERE BusinessDate LIKE '0001-01-01%';
+UPDATE sale_returns SET BusinessDate = substr(PostedAt, 1, 10) || ' 00:00:00' WHERE BusinessDate LIKE '0001-01-01%';
+UPDATE customer_collections SET BusinessDate = substr(CollectedAt, 1, 10) || ' 00:00:00' WHERE BusinessDate LIKE '0001-01-01%';
+UPDATE goods_receipts SET BusinessDate = substr(ReceivedAt, 1, 10) || ' 00:00:00' WHERE BusinessDate LIKE '0001-01-01%';
+UPDATE purchase_returns SET BusinessDate = substr(PostedAt, 1, 10) || ' 00:00:00' WHERE BusinessDate LIKE '0001-01-01%';
+UPDATE purchase_payments SET BusinessDate = substr(PaidAt, 1, 10) || ' 00:00:00' WHERE BusinessDate LIKE '0001-01-01%';
+UPDATE supplier_payments SET BusinessDate = substr(PaidAt, 1, 10) || ' 00:00:00' WHERE BusinessDate LIKE '0001-01-01%';
+UPDATE operating_entries SET BusinessDate = substr(OccurredAt, 1, 10) || ' 00:00:00' WHERE BusinessDate LIKE '0001-01-01%';
+
+CREATE INDEX IF NOT EXISTS IX_sales_BusinessDate ON sales (BusinessDate);
+CREATE INDEX IF NOT EXISTS IX_sale_returns_BusinessDate ON sale_returns (BusinessDate);
+CREATE INDEX IF NOT EXISTS IX_customer_collections_BusinessDate ON customer_collections (BusinessDate);
+CREATE INDEX IF NOT EXISTS IX_goods_receipts_BusinessDate ON goods_receipts (BusinessDate);
+CREATE INDEX IF NOT EXISTS IX_purchase_returns_BusinessDate ON purchase_returns (BusinessDate);
+CREATE INDEX IF NOT EXISTS IX_purchase_payments_BusinessDate ON purchase_payments (BusinessDate);
+CREATE INDEX IF NOT EXISTS IX_supplier_payments_BusinessDate ON supplier_payments (BusinessDate);
+CREATE INDEX IF NOT EXISTS IX_operating_entries_BusinessDate ON operating_entries (BusinessDate);
+""", cancellationToken);
+
         const string closingSql = """
 CREATE TABLE IF NOT EXISTS business_days (
     Id INTEGER NOT NULL CONSTRAINT PK_business_days PRIMARY KEY AUTOINCREMENT,

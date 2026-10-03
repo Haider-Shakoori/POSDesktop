@@ -589,6 +589,15 @@ public sealed class PosDbContext(DbContextOptions<PosDbContext> options) : DbCon
         saleRefund.HasIndex(x => x.IdempotencyKey).IsUnique();
         saleRefund.Property(x => x.Amount).HasPrecision(18, 2);
 
+        modelBuilder.Entity<SaleEntity>().HasIndex(x => x.BusinessDate);
+        modelBuilder.Entity<SaleReturnEntity>().HasIndex(x => x.BusinessDate);
+        modelBuilder.Entity<CustomerCollectionEntity>().HasIndex(x => x.BusinessDate);
+        modelBuilder.Entity<GoodsReceiptEntity>().HasIndex(x => x.BusinessDate);
+        modelBuilder.Entity<PurchaseReturnEntity>().HasIndex(x => x.BusinessDate);
+        modelBuilder.Entity<PurchasePaymentEntity>().HasIndex(x => x.BusinessDate);
+        modelBuilder.Entity<SupplierPaymentEntity>().HasIndex(x => x.BusinessDate);
+        modelBuilder.Entity<OperatingEntryEntity>().HasIndex(x => x.BusinessDate);
+
         base.OnModelCreating(modelBuilder);
     }
 }
