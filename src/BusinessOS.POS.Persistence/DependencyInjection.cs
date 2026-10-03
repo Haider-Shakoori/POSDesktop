@@ -40,6 +40,7 @@ public static class DependencyInjection
         services.AddSingleton<IUserSessionService, LocalUserSessionService>();
         services.AddSingleton<IPermissionAuthorizer, PermissionAuthorizer>();
         services.AddSingleton<IPosService, LocalPosService>();
+        services.AddSingleton<ISalesService, LocalSalesService>();
         services.AddSingleton<IProductCatalogService, LocalProductCatalogService>();
         services.AddSingleton<IInventoryService, LocalInventoryService>();
 

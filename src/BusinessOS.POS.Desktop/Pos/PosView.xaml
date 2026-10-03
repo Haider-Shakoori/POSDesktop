@@ -182,6 +182,8 @@
                                 <ColumnDefinition />
                                 <ColumnDefinition Width="8" />
                                 <ColumnDefinition />
+                                <ColumnDefinition Width="8" />
+                                <ColumnDefinition />
                             </Grid.ColumnDefinitions>
                             <Button Content="Hold · F8"
                                     Command="{Binding HoldCommand}"
@@ -190,7 +192,21 @@
                                     Content="Resume"
                                     Command="{Binding ResumeHeldCommand}"
                                     Style="{StaticResource SecondaryButtonStyle}" />
+                            <Button Grid.Column="4"
+                                    Content="Release"
+                                    Command="{Binding ReleaseHeldCommand}"
+                                    Style="{StaticResource SecondaryButtonStyle}" />
                         </Grid>
+
+                        <TextBlock Text="Sale notes" Style="{StaticResource MutedTextStyle}" Margin="0,10,0,3" />
+                        <TextBox Text="{Binding SaleNotes}" Height="46" AcceptsReturn="True"
+                                 TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" />
+
+                        <Button Content="{Binding LastSaleNumber, StringFormat=Print Receipt · {0}, TargetNullValue=Print Last Receipt}"
+                                Command="{Binding PrintLastReceiptCommand}"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                Margin="0,10,0,0" />
+
                         <TextBlock Text="{Binding StatusMessage}" Style="{StaticResource MutedTextStyle}"
                                    TextWrapping="Wrap" Margin="0,10,0,0" />
                     </StackPanel>
@@ -236,18 +252,44 @@
                                        Foreground="{DynamicResource BrandPrimaryBrush}" />
                         </Grid>
 
+                        <TextBlock Text="Payments" Style="{StaticResource MutedTextStyle}" Margin="0,0,0,4" />
+                        <DataGrid ItemsSource="{Binding Payments}"
+                                  AutoGenerateColumns="False"
+                                  CanUserAddRows="False"
+                                  MaxHeight="132"
+                                  Margin="0,0,0,8">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Method" Binding="{Binding MethodName}" Width="*" IsReadOnly="True" />
+                                <DataGridTextColumn Header="Applied" Binding="{Binding Amount, UpdateSourceTrigger=PropertyChanged}" Width="82" />
+                                <DataGridTextColumn Header="Tendered" Binding="{Binding TenderedAmount, UpdateSourceTrigger=PropertyChanged}" Width="82" />
+                                <DataGridTextColumn Header="Ref" Binding="{Binding Reference, UpdateSourceTrigger=PropertyChanged}" Width="88" />
+                                <DataGridTemplateColumn Header="" Width="46">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <Button Content="×"
+                                                    Command="{Binding DataContext.RemovePaymentCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}"
+                                                    Style="{StaticResource SecondaryButtonStyle}"
+                                                    Width="30" MinWidth="30" Height="26" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+
                         <Grid Margin="0,0,0,8">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition />
-                                <ColumnDefinition Width="10" />
-                                <ColumnDefinition />
+                                <ColumnDefinition Width="8" />
+                                <ColumnDefinition Width="96" />
                             </Grid.ColumnDefinitions>
                             <ComboBox ItemsSource="{Binding PaymentMethods}"
-                                      SelectedItem="{Binding SelectedPaymentMethod}"
+                                      SelectedItem="{Binding SelectedPaymentMethodToAdd}"
                                       DisplayMemberPath="Name" />
-                            <TextBox Grid.Column="2"
-                                     Text="{Binding PaymentAmount, UpdateSourceTrigger=PropertyChanged}"
-                                     Height="36" Padding="8,0" VerticalContentAlignment="Center" />
+                            <Button Grid.Column="2"
+                                    Content="Add Payment"
+                                    Command="{Binding AddPaymentCommand}"
+                                    Style="{StaticResource SecondaryButtonStyle}" />
                         </Grid>
 
                         <Grid Margin="0,0,0,10">
@@ -255,9 +297,17 @@
                                 <ColumnDefinition />
                                 <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
-                            <TextBlock Text="Change" Style="{StaticResource MutedTextStyle}" />
-                            <TextBlock Grid.Column="1" Text="{Binding ChangeAmount, StringFormat=AFN {0:N2}}"
-                                       FontWeight="SemiBold" Foreground="{DynamicResource SuccessBrush}" />
+                            <StackPanel>
+                                <TextBlock Text="{Binding PaymentSummaryText}" Style="{StaticResource MutedTextStyle}" />
+                                <TextBlock Text="{Binding AppliedPaymentTotal, StringFormat=Applied: AFN {0:N2}}"
+                                           Style="{StaticResource MutedTextStyle}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" HorizontalAlignment="Right">
+                                <TextBlock Text="Change" Style="{StaticResource MutedTextStyle}" HorizontalAlignment="Right" />
+                                <TextBlock Text="{Binding ChangeAmount, StringFormat=AFN {0:N2}}"
+                                           FontWeight="SemiBold" Foreground="{DynamicResource SuccessBrush}"
+                                           HorizontalAlignment="Right" />
+                            </StackPanel>
                         </Grid>
 
                         <Button Content="Complete Sale · F9 / Ctrl+Enter"

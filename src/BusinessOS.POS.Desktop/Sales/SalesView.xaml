@@ -1,0 +1,177 @@
+<UserControl x:Class="BusinessOS.POS.Desktop.Sales.SalesView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Loaded="OnLoaded">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="1.1*" />
+            <ColumnDefinition Width="16" />
+            <ColumnDefinition Width="1.2*" />
+        </Grid.ColumnDefinitions>
+
+        <Border Style="{StaticResource CardBorderStyle}" Padding="0">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <Grid Margin="18,16,18,12">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition />
+                        <ColumnDefinition Width="8" />
+                        <ColumnDefinition Width="90" />
+                    </Grid.ColumnDefinitions>
+                    <TextBox Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                             Height="38" Padding="10,0" VerticalContentAlignment="Center"
+                             ToolTip="Search sale number or customer" />
+                    <Button Grid.Column="2" Content="Search"
+                            Command="{Binding SearchCommand}"
+                            Style="{StaticResource PrimaryButtonStyle}" />
+                </Grid>
+
+                <DataGrid Grid.Row="1"
+                          ItemsSource="{Binding Sales}"
+                          SelectedItem="{Binding SelectedSale}"
+                          AutoGenerateColumns="False"
+                          IsReadOnly="True">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Number" Binding="{Binding Number}" Width="145" />
+                        <DataGridTextColumn Header="Customer" Binding="{Binding CustomerName}" Width="*" />
+                        <DataGridTextColumn Header="Total" Binding="{Binding NetTotal, StringFormat=N2}" Width="86" />
+                        <DataGridTextColumn Header="Paid" Binding="{Binding PaidAmount, StringFormat=N2}" Width="80" />
+                        <DataGridTextColumn Header="Status" Binding="{Binding PaymentStatus}" Width="82" />
+                        <DataGridTextColumn Header="Sold" Binding="{Binding SoldAt, StringFormat=g}" Width="142" />
+                    </DataGrid.Columns>
+                </DataGrid>
+
+                <Grid Grid.Row="2" Margin="18,12,18,16">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition />
+                        <ColumnDefinition Width="8" />
+                        <ColumnDefinition />
+                    </Grid.ColumnDefinitions>
+                    <Button Content="Refresh" Command="{Binding RefreshCommand}"
+                            Style="{StaticResource SecondaryButtonStyle}" />
+                    <Button Grid.Column="2" Content="Print Receipt"
+                            Command="{Binding PrintReceiptCommand}"
+                            Style="{StaticResource PrimaryButtonStyle}" />
+                </Grid>
+            </Grid>
+        </Border>
+
+        <Border Grid.Column="2" Style="{StaticResource CardBorderStyle}" Padding="0">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="20">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="{Binding SelectedSaleDetail.Number, TargetNullValue=Select a sale}"
+                                       Style="{StaticResource SectionTitleStyle}" />
+                            <TextBlock Text="{Binding SelectedSaleDetail.SoldAt, StringFormat={}{0:g}}"
+                                       Style="{StaticResource MutedTextStyle}" Margin="0,3,0,0" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" HorizontalAlignment="Right">
+                            <TextBlock Text="{Binding SelectedSaleDetail.PaymentStatus}"
+                                       FontWeight="SemiBold" HorizontalAlignment="Right" />
+                            <TextBlock Text="{Binding SelectedSaleDetail.NetTotal, StringFormat=AFN {0:N2}}"
+                                       FontSize="20" FontWeight="Bold"
+                                       Foreground="{DynamicResource BrandPrimaryBrush}" />
+                        </StackPanel>
+                    </Grid>
+
+                    <Grid Margin="0,16,0,12">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition />
+                            <ColumnDefinition />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="Customer" Style="{StaticResource MutedTextStyle}" />
+                            <TextBlock Text="{Binding SelectedSaleDetail.CustomerName}" FontWeight="SemiBold" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1">
+                            <TextBlock Text="Cashier" Style="{StaticResource MutedTextStyle}" />
+                            <TextBlock Text="{Binding SelectedSaleDetail.CashierName}" FontWeight="SemiBold" />
+                        </StackPanel>
+                    </Grid>
+
+                    <TextBlock Text="Items" Style="{StaticResource SectionTitleStyle}" Margin="0,6,0,6" />
+                    <DataGrid ItemsSource="{Binding SelectedSaleDetail.Items}"
+                              AutoGenerateColumns="False"
+                              IsReadOnly="True"
+                              MinHeight="190"
+                              MaxHeight="300">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="SKU" Binding="{Binding Sku}" Width="95" />
+                            <DataGridTextColumn Header="Item" Binding="{Binding Product}" Width="*" />
+                            <DataGridTextColumn Header="Qty" Binding="{Binding Quantity, StringFormat=N2}" Width="66" />
+                            <DataGridTextColumn Header="Unit" Binding="{Binding Unit}" Width="72" />
+                            <DataGridTextColumn Header="Price" Binding="{Binding UnitPrice, StringFormat=N2}" Width="76" />
+                            <DataGridTextColumn Header="Disc." Binding="{Binding LineDiscount, StringFormat=N2}" Width="70" />
+                            <DataGridTextColumn Header="Total" Binding="{Binding NetTotal, StringFormat=N2}" Width="78" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <TextBlock Text="Payments" Style="{StaticResource SectionTitleStyle}" Margin="0,14,0,6" />
+                    <DataGrid ItemsSource="{Binding SelectedSaleDetail.Payments}"
+                              AutoGenerateColumns="False"
+                              IsReadOnly="True"
+                              MinHeight="110"
+                              MaxHeight="190">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Method" Binding="{Binding MethodName}" Width="*" />
+                            <DataGridTextColumn Header="Applied" Binding="{Binding AppliedAmount, StringFormat=N2}" Width="82" />
+                            <DataGridTextColumn Header="Tendered" Binding="{Binding TenderedAmount, StringFormat=N2}" Width="88" />
+                            <DataGridTextColumn Header="Change" Binding="{Binding ChangeAmount, StringFormat=N2}" Width="76" />
+                            <DataGridTextColumn Header="Reference" Binding="{Binding Reference}" Width="110" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <Grid Margin="0,14,0,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <StackPanel>
+                            <TextBlock Text="Subtotal" Style="{StaticResource MutedTextStyle}" />
+                            <TextBlock Text="Line discounts" Style="{StaticResource MutedTextStyle}" Margin="0,4,0,0" />
+                            <TextBlock Text="Sale discount" Style="{StaticResource MutedTextStyle}" Margin="0,4,0,0" />
+                            <TextBlock Text="Change" Style="{StaticResource MutedTextStyle}" Margin="0,4,0,0" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" HorizontalAlignment="Right">
+                            <TextBlock Text="{Binding SelectedSaleDetail.Subtotal, StringFormat=AFN {0:N2}}" />
+                            <TextBlock Text="{Binding SelectedSaleDetail.LineDiscountTotal, StringFormat=AFN {0:N2}}" Margin="0,4,0,0" />
+                            <TextBlock Text="{Binding SelectedSaleDetail.SaleDiscountAmount, StringFormat=AFN {0:N2}}" Margin="0,4,0,0" />
+                            <TextBlock Text="{Binding SelectedSaleDetail.ChangeAmount, StringFormat=AFN {0:N2}}" Margin="0,4,0,0" />
+                        </StackPanel>
+                    </Grid>
+
+                    <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,14,0,10" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="NET TOTAL" FontWeight="Bold" />
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding SelectedSaleDetail.NetTotal, StringFormat=AFN {0:N2}}"
+                                   FontWeight="Bold" FontSize="18" />
+                    </Grid>
+
+                    <TextBlock Text="{Binding SelectedSaleDetail.Notes}"
+                               Style="{StaticResource MutedTextStyle}"
+                               TextWrapping="Wrap"
+                               Margin="0,12,0,0" />
+                    <TextBlock Text="{Binding StatusMessage}"
+                               Style="{StaticResource MutedTextStyle}"
+                               TextWrapping="Wrap"
+                               Margin="0,12,0,0" />
+                </StackPanel>
+            </ScrollViewer>
+        </Border>
+    </Grid>
+</UserControl>

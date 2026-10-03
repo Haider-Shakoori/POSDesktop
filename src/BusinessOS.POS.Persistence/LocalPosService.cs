@@ -325,8 +325,11 @@ public sealed class LocalPosService(
             .Where(x => x.IsActive)
             .ToDictionaryAsync(x => x.Code, StringComparer.OrdinalIgnoreCase, cancellationToken);
 
-        decimal tendered = 0m;
+        decimal appliedTotal = 0m;
+        decimal changeTotal = 0m;
         var hasCash = false;
+        var preparedPayments = new List<PreparedPayment>(request.Payments.Count);
+
         foreach (var payment in request.Payments)
         {
             if (payment.Amount <= 0m)
@@ -339,19 +342,36 @@ public sealed class LocalPosService(
                 throw new InvalidOperationException("The selected payment method is unavailable.");
             }
 
-            tendered += Money(payment.Amount);
+            var applied = Money(payment.Amount);
+            var tendered = Money(payment.TenderedAmount ?? payment.Amount);
+            if (tendered < applied)
+            {
+                throw new InvalidOperationException("Tendered amount cannot be less than the applied payment.");
+            }
+
+            if (!method.IsCash && tendered != applied)
+            {
+                throw new InvalidOperationException("Tendered amount can exceed applied amount only for cash.");
+            }
+
+            var change = method.IsCash ? Money(tendered - applied) : 0m;
+            appliedTotal += applied;
+            changeTotal += change;
             hasCash |= method.IsCash;
+            preparedPayments.Add(new PreparedPayment(
+                payment.MethodCode,
+                applied,
+                tendered,
+                change,
+                payment.Reference?.Trim(),
+                payment.Notes?.Trim()));
         }
 
-        tendered = Money(tendered);
-        if (tendered < netTotal)
+        appliedTotal = Money(appliedTotal);
+        changeTotal = Money(changeTotal);
+        if (appliedTotal != netTotal)
         {
-            throw new InvalidOperationException("Payment does not cover the sale total.");
-        }
-
-        if (tendered > netTotal && !hasCash)
-        {
-            throw new InvalidOperationException("Change can only be returned when cash is part of the payment.");
+            throw new InvalidOperationException("Applied payments must exactly match the sale total.");
         }
 
         CashierShiftEntity? shift = null;
@@ -380,8 +400,8 @@ public sealed class LocalPosService(
             LineDiscountTotal = lineDiscountTotal,
             SaleDiscountAmount = saleDiscount,
             NetTotal = netTotal,
-            PaidAmount = netTotal,
-            ChangeAmount = Money(tendered - netTotal),
+            PaidAmount = appliedTotal,
+            ChangeAmount = changeTotal,
             SoldAt = soldAt,
             Notes = request.Notes?.Trim(),
         };
@@ -434,13 +454,16 @@ public sealed class LocalPosService(
         sale.CogsTotal = Money(cogsTotal);
         sale.GrossProfit = Money(sale.NetTotal - sale.CogsTotal);
 
-        foreach (var payment in request.Payments)
+        foreach (var payment in preparedPayments)
         {
             sale.Payments.Add(new SalePaymentEntity
             {
                 MethodCode = payment.MethodCode,
-                Amount = Money(payment.Amount),
-                Reference = payment.Reference?.Trim(),
+                Amount = payment.AppliedAmount,
+                TenderedAmount = payment.TenderedAmount,
+                ChangeAmount = payment.ChangeAmount,
+                Reference = payment.Reference,
+                Notes = payment.Notes,
                 PaidAt = soldAt,
             });
         }
@@ -599,10 +622,17 @@ public sealed class LocalPosService(
             .Where(x => ids.Contains(x.Id))
             .ToDictionaryAsync(x => x.Id, cancellationToken);
 
-        var lines = held.Items.Select(item =>
+        var lines = new List<PosHeldSaleLine>(held.Items.Count);
+        foreach (var item in held.Items)
         {
             var productUnit = units[item.ProductUnitId];
-            return new PosHeldSaleLine(
+            decimal? availableBase = null;
+            if (productUnit.Product.TrackStock && productUnit.Product.TrackExpiry)
+            {
+                availableBase = await GetSellableBaseQuantityAsync(context, productUnit.Product, cancellationToken);
+            }
+
+            lines.Add(new PosHeldSaleLine(
                 item.ProductUnitId,
                 item.ProductNameSnapshot,
                 item.SkuSnapshot,
@@ -610,12 +640,12 @@ public sealed class LocalPosService(
                 item.Quantity,
                 item.UnitPriceSnapshot,
                 item.LineDiscountAmount,
-                Available(productUnit),
+                Available(productUnit, availableBase),
                 productUnit.MinimumSellingPrice ?? productUnit.Product.MinimumSellingPrice,
                 productUnit.Product.TrackStock,
                 productUnit.Unit.DecimalPlaces,
-                productUnit.ConversionFactor);
-        }).ToList();
+                productUnit.ConversionFactor));
+        }
 
         held.Status = "resumed";
         held.ResumedAt = DateTimeOffset.UtcNow;
@@ -628,6 +658,40 @@ public sealed class LocalPosService(
             held.SaleDiscountAmount,
             held.Notes,
             lines);
+    }
+
+    public async Task ReleaseHeldSaleAsync(
+        long heldSaleId,
+        CancellationToken cancellationToken = default)
+    {
+        authorizer.Demand("sales.hold");
+        var user = RequireUser();
+
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var held = await context.HeldSales
+            .SingleOrDefaultAsync(x => x.Id == heldSaleId, cancellationToken)
+            ?? throw new InvalidOperationException("Held sale was not found.");
+
+        if (held.Status != "held")
+        {
+            throw new InvalidOperationException("Only an active held sale can be released.");
+        }
+
+        if (held.CashierUserId != user.UserId && !authorizer.HasPermission("sales.void"))
+        {
+            throw new InvalidOperationException("This held sale belongs to another cashier.");
+        }
+
+        held.Status = "released";
+        held.ReleasedAt = DateTimeOffset.UtcNow;
+        context.AuditLogs.Add(new AuditLogEntity
+        {
+            ActorUserId = user.UserId,
+            Event = "sales.held_sale.released",
+            CreatedAt = DateTimeOffset.UtcNow,
+            DetailsJson = "{\"held_sale_number\":\"" + held.Number + "\"}",
+        });
+        await context.SaveChangesAsync(cancellationToken);
     }
 
     private BusinessOS.POS.Domain.Authentication.UserSessionSnapshot RequireUser() =>
@@ -707,7 +771,9 @@ public sealed class LocalPosService(
         {
             builder.Append(payment.MethodCode).Append(':')
                 .Append(Money(payment.Amount).ToString(CultureInfo.InvariantCulture)).Append(':')
-                .Append(payment.Reference?.Trim()).Append('|');
+                .Append(Money(payment.TenderedAmount ?? payment.Amount).ToString(CultureInfo.InvariantCulture)).Append(':')
+                .Append(payment.Reference?.Trim()).Append(':')
+                .Append(payment.Notes?.Trim()).Append('|');
         }
 
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(builder.ToString())));
@@ -935,6 +1001,14 @@ public sealed class LocalPosService(
             Money(Math.Max(0m, subtotal - held.SaleDiscountAmount)),
             held.HeldAt);
     }
+
+    private sealed record PreparedPayment(
+        string MethodCode,
+        decimal AppliedAmount,
+        decimal TenderedAmount,
+        decimal ChangeAmount,
+        string? Reference,
+        string? Notes);
 
     private sealed class PreparedLine(
         ProductUnitEntity productUnit,

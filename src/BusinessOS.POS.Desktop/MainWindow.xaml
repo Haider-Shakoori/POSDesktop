@@ -4,6 +4,7 @@
         xmlns:pos="clr-namespace:BusinessOS.POS.Desktop.Pos"
         xmlns:catalog="clr-namespace:BusinessOS.POS.Desktop.Catalog"
         xmlns:inventory="clr-namespace:BusinessOS.POS.Desktop.Inventory"
+        xmlns:sales="clr-namespace:BusinessOS.POS.Desktop.Sales"
         Title="BusinessOS POS"
         Width="1440"
         Height="900"
@@ -124,6 +125,10 @@
 
         <DataTemplate x:Key="InventoryTemplate">
             <inventory:InventoryView DataContext="{Binding DataContext.Inventory, RelativeSource={RelativeSource AncestorType=Window}}" />
+        </DataTemplate>
+
+        <DataTemplate x:Key="SalesTemplate">
+            <sales:SalesView DataContext="{Binding DataContext.Sales, RelativeSource={RelativeSource AncestorType=Window}}" />
         </DataTemplate>
 
         <DataTemplate x:Key="ModuleTemplate">
@@ -288,6 +293,9 @@
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding SelectedNavigation.Key}" Value="inventory">
                                     <Setter Property="ContentTemplate" Value="{StaticResource InventoryTemplate}" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectedNavigation.Key}" Value="sales">
+                                    <Setter Property="ContentTemplate" Value="{StaticResource SalesTemplate}" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>

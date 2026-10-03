@@ -9,6 +9,7 @@ public interface IPosService
     Task<PosHeldSaleSummary> HoldAsync(PosHoldRequest request, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<PosHeldSaleSummary>> GetHeldSalesAsync(CancellationToken cancellationToken = default);
     Task<PosHeldSaleDetail> ResumeHeldSaleAsync(long heldSaleId, CancellationToken cancellationToken = default);
+    Task ReleaseHeldSaleAsync(long heldSaleId, CancellationToken cancellationToken = default);
 }
 
 public sealed record PosReferenceData(
@@ -34,7 +35,12 @@ public sealed record PosProductSearchItem(
     string? MatchedBarcode);
 
 public sealed record PosCheckoutLineRequest(long ProductUnitId, decimal Quantity, decimal LineDiscountAmount = 0m);
-public sealed record PosPaymentRequest(string MethodCode, decimal Amount, string? Reference = null);
+public sealed record PosPaymentRequest(
+    string MethodCode,
+    decimal Amount,
+    decimal? TenderedAmount = null,
+    string? Reference = null,
+    string? Notes = null);
 
 public sealed record PosCheckoutRequest(
     string IdempotencyKey,
