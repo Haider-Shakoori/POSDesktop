@@ -1009,9 +1009,20 @@ CREATE UNIQUE INDEX IF NOT EXISTS IX_business_day_closures_day_version
 ON business_day_closures (BusinessDayId, Version);
 
 INSERT OR IGNORE INTO business_days (BusinessDate, Status)
-SELECT DISTINCT BusinessDate, 'open'
-FROM cashier_shifts
-WHERE BusinessDate IS NOT NULL;
+SELECT BusinessDate, 'open'
+FROM (
+    SELECT BusinessDate FROM cashier_shifts
+    UNION SELECT BusinessDate FROM sales
+    UNION SELECT BusinessDate FROM sale_returns
+    UNION SELECT BusinessDate FROM customer_collections
+    UNION SELECT BusinessDate FROM goods_receipts
+    UNION SELECT BusinessDate FROM purchase_returns
+    UNION SELECT BusinessDate FROM purchase_payments
+    UNION SELECT BusinessDate FROM supplier_payments
+    UNION SELECT BusinessDate FROM operating_entries
+)
+WHERE BusinessDate IS NOT NULL
+  AND BusinessDate NOT LIKE '0001-01-01%';
 """;
         await context.Database.ExecuteSqlRawAsync(closingSql, cancellationToken);
 
