@@ -50,6 +50,13 @@ public sealed class WpfReceiptPrintService : IReceiptPrintService
         if (sale.SaleDiscountAmount > 0m)
             builder.AppendLine("Sale discount: -" + receipt.CurrencyCode + " " + sale.SaleDiscountAmount.ToString("N2", CultureInfo.InvariantCulture));
         builder.AppendLine("TOTAL: " + receipt.CurrencyCode + " " + sale.NetTotal.ToString("N2", CultureInfo.InvariantCulture));
+        builder.AppendLine("Payment status: " + sale.PaymentStatus);
+        if (sale.BalanceDue > 0m)
+            builder.AppendLine("Balance due: " + receipt.CurrencyCode + " " + sale.BalanceDue.ToString("N2", CultureInfo.InvariantCulture));
+        if (sale.ReturnedTotal > 0m)
+            builder.AppendLine("Returned: " + receipt.CurrencyCode + " " + sale.ReturnedTotal.ToString("N2", CultureInfo.InvariantCulture));
+        if (sale.RefundedTotal > 0m)
+            builder.AppendLine("Refunded: " + receipt.CurrencyCode + " " + sale.RefundedTotal.ToString("N2", CultureInfo.InvariantCulture));
         builder.AppendLine(new string('-', 42));
         builder.AppendLine("Payments:");
         foreach (var payment in sale.Payments)
@@ -152,6 +159,16 @@ public sealed class WpfReceiptPrintService : IReceiptPrintService
             FontWeight = FontWeights.Bold,
         });
         document.Blocks.Add(total);
+
+        var settlement = new StringBuilder();
+        settlement.AppendLine("Payment status: " + sale.PaymentStatus);
+        if (sale.BalanceDue > 0m)
+            settlement.AppendLine("Balance due: " + receipt.CurrencyCode + " " + sale.BalanceDue.ToString("N2", CultureInfo.InvariantCulture));
+        if (sale.ReturnedTotal > 0m)
+            settlement.AppendLine("Returned: " + receipt.CurrencyCode + " " + sale.ReturnedTotal.ToString("N2", CultureInfo.InvariantCulture));
+        if (sale.RefundedTotal > 0m)
+            settlement.AppendLine("Refunded: " + receipt.CurrencyCode + " " + sale.RefundedTotal.ToString("N2", CultureInfo.InvariantCulture));
+        document.Blocks.Add(new Paragraph(new Run(settlement.ToString())) { Margin = new Thickness(0, 0, 0, 8) });
 
         var payments = new StringBuilder("Payments:\n");
         foreach (var payment in sale.Payments)
