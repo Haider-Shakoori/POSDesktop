@@ -73,7 +73,15 @@ public sealed class LocalPosService(
 
             if (exactBarcode is not null)
             {
-                return [MapProduct(exactBarcode.ProductUnit, user.PreferredLocale, exactBarcode.Barcode)];
+                var availableBase = await GetSellableBaseQuantityAsync(
+                    context,
+                    exactBarcode.ProductUnit.Product,
+                    cancellationToken);
+                return [MapProduct(
+                    exactBarcode.ProductUnit,
+                    user.PreferredLocale,
+                    exactBarcode.Barcode,
+                    availableBase)];
             }
         }
 
@@ -98,9 +106,33 @@ public sealed class LocalPosService(
                 x.Product.Barcodes.Any(b => Contains(b.Barcode, query)));
         }
 
-        return filtered
-            .Take(take)
-            .Select(x => MapProduct(x, user.PreferredLocale, null))
+        var selected = filtered.Take(take).ToList();
+        var expiryProductIds = selected
+            .Where(x => x.Product.TrackExpiry)
+            .Select(x => x.ProductId)
+            .Distinct()
+            .ToList();
+
+        var sellableByProduct = new Dictionary<long, decimal>();
+        if (expiryProductIds.Count > 0)
+        {
+            var allBatches = await context.ProductBatches
+                .AsNoTracking()
+                .Where(x => expiryProductIds.Contains(x.ProductId))
+                .ToListAsync(cancellationToken);
+            var today = DateTime.Today;
+            sellableByProduct = allBatches
+                .Where(x => !x.IsBlocked && x.ExpiresAt is not null && x.ExpiresAt.Value.Date >= today && x.StockOnHand > 0m)
+                .GroupBy(x => x.ProductId)
+                .ToDictionary(x => x.Key, x => Quantity(x.Sum(b => b.StockOnHand)));
+        }
+
+        return selected
+            .Select(x => MapProduct(
+                x,
+                user.PreferredLocale,
+                null,
+                x.Product.TrackExpiry ? sellableByProduct.GetValueOrDefault(x.ProductId, 0m) : null))
             .ToList();
     }
 
@@ -233,9 +265,22 @@ public sealed class LocalPosService(
             }
 
             var quantityBase = Quantity(line.Quantity * productUnit.ConversionFactor);
-            if (productUnit.Product.TrackStock && productUnit.Product.StockOnHand < quantityBase)
+            if (productUnit.Product.TrackStock)
             {
-                throw new InvalidOperationException("Insufficient stock for " + productUnit.Product.NameEn + ".");
+                if (productUnit.Product.StockOnHand < quantityBase)
+                {
+                    throw new InvalidOperationException("Insufficient stock for " + productUnit.Product.NameEn + ".");
+                }
+
+                if (productUnit.Product.TrackExpiry)
+                {
+                    var sellableBase = await GetSellableBaseQuantityAsync(context, productUnit.Product, cancellationToken);
+                    if (sellableBase < quantityBase)
+                    {
+                        throw new InvalidOperationException(
+                            "Insufficient non-expired batch stock for " + productUnit.Product.NameEn + ".");
+                    }
+                }
             }
 
             subtotal += lineSubtotal;
@@ -352,20 +397,17 @@ public sealed class LocalPosService(
 
             if (product.TrackStock)
             {
-                product.StockOnHand = Quantity(product.StockOnHand - line.QuantityBase);
-                context.StockMovements.Add(new StockMovementEntity
-                {
-                    ProductId = product.Id,
-                    ActorUserId = user.UserId,
-                    MovementType = "sale",
-                    QuantityBase = -line.QuantityBase,
-                    BalanceAfter = product.StockOnHand,
-                    UnitCostBase = line.QuantityBase == 0m ? 0m : decimal.Round(cogs / line.QuantityBase, 4),
-                    ReferenceType = "sale",
-                    ReferenceId = sale.Id,
-                    Notes = "Sale " + sale.Number,
-                    OccurredAt = soldAt,
-                });
+                await DeductPhysicalStockAsync(
+                    context,
+                    product,
+                    line.ProductUnit,
+                    line.Quantity,
+                    line.QuantityBase,
+                    cogs,
+                    sale,
+                    user.UserId,
+                    soldAt,
+                    cancellationToken);
             }
 
             sale.Items.Add(new SaleItemEntity
@@ -591,7 +633,11 @@ public sealed class LocalPosService(
     private BusinessOS.POS.Domain.Authentication.UserSessionSnapshot RequireUser() =>
         sessions.Current ?? throw new InvalidOperationException("No user is signed in.");
 
-    private PosProductSearchItem MapProduct(ProductUnitEntity unit, string language, string? matchedBarcode) =>
+    private PosProductSearchItem MapProduct(
+        ProductUnitEntity unit,
+        string language,
+        string? matchedBarcode,
+        decimal? availableBaseOverride = null) =>
         new(
             unit.Id,
             unit.ProductId,
@@ -602,16 +648,16 @@ public sealed class LocalPosService(
             unit.ConversionFactor,
             Money(unit.SellingPrice ?? unit.Product.SellingPrice),
             unit.MinimumSellingPrice ?? unit.Product.MinimumSellingPrice,
-            Available(unit),
+            Available(unit, availableBaseOverride),
             unit.Product.TrackStock,
             matchedBarcode);
 
-    private static decimal? Available(ProductUnitEntity unit) =>
+    private static decimal? Available(ProductUnitEntity unit, decimal? availableBaseOverride = null) =>
         !unit.Product.TrackStock
             ? null
             : unit.ConversionFactor <= 0m
                 ? 0m
-                : Quantity(unit.Product.StockOnHand / unit.ConversionFactor);
+                : Quantity((availableBaseOverride ?? unit.Product.StockOnHand) / unit.ConversionFactor);
 
     private static bool Contains(string? source, string value) =>
         !string.IsNullOrWhiteSpace(source) &&
@@ -691,6 +737,123 @@ public sealed class LocalPosService(
             line.AllocatedSaleDiscount = allocation;
             line.NetTotal = Money(basis - allocation);
             remaining = Money(remaining - allocation);
+        }
+    }
+
+    private static async Task<decimal> GetSellableBaseQuantityAsync(
+        PosDbContext context,
+        ProductEntity product,
+        CancellationToken cancellationToken)
+    {
+        if (!product.TrackStock)
+        {
+            return 0m;
+        }
+
+        if (!product.TrackExpiry)
+        {
+            return product.StockOnHand;
+        }
+
+        var batches = await context.ProductBatches
+            .AsNoTracking()
+            .Where(x => x.ProductId == product.Id && !x.IsBlocked && x.StockOnHand > 0m)
+            .ToListAsync(cancellationToken);
+
+        var today = DateTime.Today;
+        return Quantity(batches
+            .Where(x => x.ExpiresAt is not null && x.ExpiresAt.Value.Date >= today)
+            .Sum(x => x.StockOnHand));
+    }
+
+    private static async Task DeductPhysicalStockAsync(
+        PosDbContext context,
+        ProductEntity product,
+        ProductUnitEntity productUnit,
+        decimal sourceQuantity,
+        decimal quantityBase,
+        decimal cogs,
+        SaleEntity sale,
+        long actorUserId,
+        DateTimeOffset soldAt,
+        CancellationToken cancellationToken)
+    {
+        var averageCost = quantityBase == 0m ? 0m : decimal.Round(cogs / quantityBase, 4);
+
+        if (!product.TrackExpiry)
+        {
+            product.StockOnHand = Quantity(product.StockOnHand - quantityBase);
+            context.StockMovements.Add(new StockMovementEntity
+            {
+                ProductId = product.Id,
+                SourceUnitId = productUnit.UnitId,
+                ActorUserId = actorUserId,
+                MovementType = "sale",
+                SourceQuantity = -sourceQuantity,
+                ConversionFactor = productUnit.ConversionFactor,
+                QuantityBase = -quantityBase,
+                BalanceAfter = product.StockOnHand,
+                UnitCostBase = averageCost,
+                ReferenceType = "sale",
+                ReferenceId = sale.Id,
+                IdempotencyKey = "sale:" + sale.Id + ":product:" + product.Id,
+                Notes = "Sale " + sale.Number,
+                OccurredAt = soldAt,
+            });
+            return;
+        }
+
+        var candidateBatches = await context.ProductBatches
+            .Where(x => x.ProductId == product.Id && !x.IsBlocked && x.StockOnHand > 0m)
+            .ToListAsync(cancellationToken);
+        var today = DateTime.Today;
+        var batches = candidateBatches
+            .Where(x => x.ExpiresAt is not null && x.ExpiresAt.Value.Date >= today)
+            .OrderBy(x => x.ExpiresAt)
+            .ThenBy(x => x.Id)
+            .ToList();
+
+        var sellable = Quantity(batches.Sum(x => x.StockOnHand));
+        if (sellable < quantityBase)
+        {
+            throw new InvalidOperationException(
+                "Insufficient non-expired batch stock for " + product.NameEn + ".");
+        }
+
+        var remaining = quantityBase;
+        foreach (var batch in batches)
+        {
+            if (remaining <= 0m)
+            {
+                break;
+            }
+
+            var take = Math.Min(remaining, batch.StockOnHand);
+            if (take <= 0m)
+            {
+                continue;
+            }
+
+            batch.StockOnHand = Quantity(batch.StockOnHand - take);
+            product.StockOnHand = Quantity(product.StockOnHand - take);
+            remaining = Quantity(remaining - take);
+
+            context.StockMovements.Add(new StockMovementEntity
+            {
+                ProductId = product.Id,
+                ProductBatchId = batch.Id,
+                ActorUserId = actorUserId,
+                MovementType = "sale",
+                QuantityBase = -take,
+                BalanceAfter = product.StockOnHand,
+                BatchBalanceAfter = batch.StockOnHand,
+                UnitCostBase = averageCost,
+                ReferenceType = "sale",
+                ReferenceId = sale.Id,
+                IdempotencyKey = "sale:" + sale.Id + ":product:" + product.Id + ":batch:" + batch.Id,
+                Notes = "Sale " + sale.Number + " · FEFO batch " + batch.BatchNumber,
+                OccurredAt = soldAt,
+            });
         }
     }
 

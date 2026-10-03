@@ -244,6 +244,90 @@ SET BaseUnitId = COALESCE(
 )
 WHERE BaseUnitId = 0;
 """, cancellationToken);
+
+        const string inventorySql = """
+CREATE TABLE IF NOT EXISTS product_batches (
+    Id INTEGER NOT NULL CONSTRAINT PK_product_batches PRIMARY KEY AUTOINCREMENT,
+    ProductId INTEGER NOT NULL,
+    BatchNumber TEXT NOT NULL,
+    ManufacturedAt TEXT NULL,
+    ExpiresAt TEXT NULL,
+    StockOnHand TEXT NOT NULL DEFAULT '0',
+    IsBlocked INTEGER NOT NULL DEFAULT 0,
+    Notes TEXT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_product_batches_ProductId_BatchNumber ON product_batches (ProductId, BatchNumber);
+
+CREATE TABLE IF NOT EXISTS stock_counts (
+    Id INTEGER NOT NULL CONSTRAINT PK_stock_counts PRIMARY KEY AUTOINCREMENT,
+    Number TEXT NOT NULL,
+    IdempotencyKey TEXT NOT NULL,
+    ApprovalIdempotencyKey TEXT NULL,
+    CountedByUserId INTEGER NOT NULL,
+    ApprovedByUserId INTEGER NULL,
+    Status TEXT NOT NULL,
+    CountedAt TEXT NOT NULL,
+    ApprovedAt TEXT NULL,
+    Notes TEXT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_stock_counts_Number ON stock_counts (Number);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_stock_counts_IdempotencyKey ON stock_counts (IdempotencyKey);
+
+CREATE TABLE IF NOT EXISTS stock_count_items (
+    Id INTEGER NOT NULL CONSTRAINT PK_stock_count_items PRIMARY KEY AUTOINCREMENT,
+    StockCountId INTEGER NOT NULL,
+    ProductId INTEGER NOT NULL,
+    ProductBatchId INTEGER NULL,
+    ExpectedQuantityBase TEXT NOT NULL,
+    PhysicalQuantityBase TEXT NOT NULL,
+    VarianceQuantityBase TEXT NOT NULL,
+    StockMovementId INTEGER NULL,
+    CostAmount TEXT NOT NULL DEFAULT '0',
+    CONSTRAINT FK_stock_count_items_stock_counts_StockCountId FOREIGN KEY (StockCountId) REFERENCES stock_counts (Id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS inventory_writeoffs (
+    Id INTEGER NOT NULL CONSTRAINT PK_inventory_writeoffs PRIMARY KEY AUTOINCREMENT,
+    Number TEXT NOT NULL,
+    IdempotencyKey TEXT NOT NULL,
+    WriteoffType TEXT NOT NULL,
+    PostedByUserId INTEGER NOT NULL,
+    Reason TEXT NOT NULL,
+    TotalCost TEXT NOT NULL DEFAULT '0',
+    PostedAt TEXT NOT NULL,
+    Notes TEXT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_inventory_writeoffs_Number ON inventory_writeoffs (Number);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_inventory_writeoffs_IdempotencyKey ON inventory_writeoffs (IdempotencyKey);
+
+CREATE TABLE IF NOT EXISTS inventory_writeoff_items (
+    Id INTEGER NOT NULL CONSTRAINT PK_inventory_writeoff_items PRIMARY KEY AUTOINCREMENT,
+    InventoryWriteoffId INTEGER NOT NULL,
+    ProductId INTEGER NOT NULL,
+    ProductBatchId INTEGER NULL,
+    StockMovementId INTEGER NOT NULL,
+    QuantityBase TEXT NOT NULL,
+    CostAmount TEXT NOT NULL,
+    CONSTRAINT FK_inventory_writeoff_items_inventory_writeoffs_InventoryWriteoffId FOREIGN KEY (InventoryWriteoffId) REFERENCES inventory_writeoffs (Id) ON DELETE CASCADE
+);
+""";
+        await context.Database.ExecuteSqlRawAsync(inventorySql, cancellationToken);
+
+        await EnsureColumnAsync(context, "stock_movements", "ProductBatchId", "INTEGER NULL", cancellationToken);
+        await EnsureColumnAsync(context, "stock_movements", "SourceUnitId", "INTEGER NULL", cancellationToken);
+        await EnsureColumnAsync(context, "stock_movements", "SourceQuantity", "TEXT NULL", cancellationToken);
+        await EnsureColumnAsync(context, "stock_movements", "ConversionFactor", "TEXT NULL", cancellationToken);
+        await EnsureColumnAsync(context, "stock_movements", "BatchBalanceAfter", "TEXT NULL", cancellationToken);
+        await EnsureColumnAsync(context, "stock_movements", "SourceUnitCost", "TEXT NULL", cancellationToken);
+        await EnsureColumnAsync(context, "stock_movements", "IdempotencyKey", "TEXT NULL", cancellationToken);
+        await EnsureColumnAsync(context, "inventory_cost_layers", "ProductBatchId", "INTEGER NULL", cancellationToken);
+        await EnsureColumnAsync(context, "inventory_cost_layers", "SourceStockMovementId", "INTEGER NULL", cancellationToken);
+
+        await context.Database.ExecuteSqlRawAsync("""
+CREATE UNIQUE INDEX IF NOT EXISTS IX_stock_movements_IdempotencyKey
+ON stock_movements (IdempotencyKey)
+WHERE IdempotencyKey IS NOT NULL;
+""", cancellationToken);
     }
 
     private static async Task EnsureColumnAsync(
