@@ -3,6 +3,7 @@ using BusinessOS.POS.Application.Abstractions.Authentication;
 using BusinessOS.POS.Desktop.Appearance;
 using BusinessOS.POS.Desktop.Catalog;
 using BusinessOS.POS.Desktop.Inventory;
+using BusinessOS.POS.Desktop.Customers;
 using BusinessOS.POS.Desktop.Sales;
 using BusinessOS.POS.Desktop.Navigation;
 using BusinessOS.POS.Desktop.Pos;
@@ -22,13 +23,15 @@ public partial class MainWindowViewModel : ObservableObject
         PosViewModel pos,
         ProductCatalogViewModel catalog,
         InventoryViewModel inventory,
-        SalesViewModel sales)
+        SalesViewModel sales,
+        CustomersViewModel customers)
     {
         _sessions = sessions;
         Pos = pos;
         Catalog = catalog;
         Inventory = inventory;
         Sales = sales;
+        Customers = customers;
 
         var items = new[]
         {
@@ -80,6 +83,8 @@ public partial class MainWindowViewModel : ObservableObject
     public InventoryViewModel Inventory { get; }
 
     public SalesViewModel Sales { get; }
+
+    public CustomersViewModel Customers { get; }
 
     public AppearanceTheme[] Themes { get; }
 
