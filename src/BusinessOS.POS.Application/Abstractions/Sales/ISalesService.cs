@@ -7,6 +7,7 @@ public interface ISalesService
         int take = 300,
         CancellationToken cancellationToken = default);
     Task<SaleDetail?> GetSaleAsync(long saleId, CancellationToken cancellationToken = default);
+    Task<SaleReceiptData?> GetReceiptAsync(long saleId, CancellationToken cancellationToken = default);
 }
 
 public sealed record SaleHistoryRow(
