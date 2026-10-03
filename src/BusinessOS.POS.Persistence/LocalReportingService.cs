@@ -83,15 +83,11 @@ public sealed class LocalReportingService(
                 .ToList();
         }
 
-        var activeSaleIds = sales.Select(x => x.Id)
-            .Concat(returns.Select(x => x.SaleId))
-            .Distinct()
-            .ToList();
-
-        List<SaleItemEntity> allItems = activeSaleIds.Count == 0
+        var inRangeSaleIds = sales.Select(x => x.Id).Distinct().ToList();
+        List<SaleItemEntity> saleItems = inRangeSaleIds.Count == 0
             ? []
             : await context.SaleItems.AsNoTracking()
-                .Where(x => activeSaleIds.Contains(x.SaleId))
+                .Where(x => inRangeSaleIds.Contains(x.SaleId))
                 .ToListAsync(cancellationToken);
 
         var returnIds = returns.Select(x => x.Id).ToList();
@@ -101,7 +97,20 @@ public sealed class LocalReportingService(
                 .Where(x => returnIds.Contains(x.SaleReturnId))
                 .ToListAsync(cancellationToken);
 
-        var productIds = allItems.Select(x => x.ProductId).Distinct().ToList();
+        var returnSourceItemIds = returnItems.Select(x => x.SaleItemId).Distinct().ToList();
+        List<SaleItemEntity> returnSourceItems = returnSourceItemIds.Count == 0
+            ? []
+            : await context.SaleItems.AsNoTracking()
+                .Where(x => returnSourceItemIds.Contains(x.Id))
+                .ToListAsync(cancellationToken);
+
+        var allReferencedItems = saleItems
+            .Concat(returnSourceItems)
+            .GroupBy(x => x.Id)
+            .Select(x => x.First())
+            .ToList();
+
+        var productIds = allReferencedItems.Select(x => x.ProductId).Distinct().ToList();
         List<ProductEntity> products = productIds.Count == 0
             ? []
             : await context.Products.AsNoTracking()
@@ -109,7 +118,7 @@ public sealed class LocalReportingService(
                 .Where(x => productIds.Contains(x.Id))
                 .ToListAsync(cancellationToken);
         var productMap = products.ToDictionary(x => x.Id);
-        var itemMap = allItems.ToDictionary(x => x.Id);
+        var itemMap = allReferencedItems.ToDictionary(x => x.Id);
 
         bool ItemMatches(SaleItemEntity item)
         {
@@ -122,7 +131,7 @@ public sealed class LocalReportingService(
         }
 
         var itemFiltered = filters.ProductId is not null || filters.CategoryId is not null;
-        var scopedItems = itemFiltered ? allItems.Where(ItemMatches).ToList() : allItems;
+        var scopedItems = itemFiltered ? saleItems.Where(ItemMatches).ToList() : saleItems;
         var scopedSaleIds = scopedItems.Select(x => x.SaleId).Distinct().ToHashSet();
         var scopedSales = itemFiltered
             ? sales.Where(x => scopedSaleIds.Contains(x.Id)).ToList()
