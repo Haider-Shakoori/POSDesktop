@@ -325,8 +325,11 @@ public sealed class LocalPosService(
             .Where(x => x.IsActive)
             .ToDictionaryAsync(x => x.Code, StringComparer.OrdinalIgnoreCase, cancellationToken);
 
-        decimal tendered = 0m;
+        decimal appliedTotal = 0m;
+        decimal changeTotal = 0m;
         var hasCash = false;
+        var preparedPayments = new List<PreparedPayment>(request.Payments.Count);
+
         foreach (var payment in request.Payments)
         {
             if (payment.Amount <= 0m)
@@ -339,19 +342,36 @@ public sealed class LocalPosService(
                 throw new InvalidOperationException("The selected payment method is unavailable.");
             }
 
-            tendered += Money(payment.Amount);
+            var applied = Money(payment.Amount);
+            var tendered = Money(payment.TenderedAmount ?? payment.Amount);
+            if (tendered < applied)
+            {
+                throw new InvalidOperationException("Tendered amount cannot be less than the applied payment.");
+            }
+
+            if (!method.IsCash && tendered != applied)
+            {
+                throw new InvalidOperationException("Tendered amount can exceed applied amount only for cash.");
+            }
+
+            var change = method.IsCash ? Money(tendered - applied) : 0m;
+            appliedTotal += applied;
+            changeTotal += change;
             hasCash |= method.IsCash;
+            preparedPayments.Add(new PreparedPayment(
+                payment.MethodCode,
+                applied,
+                tendered,
+                change,
+                payment.Reference?.Trim(),
+                payment.Notes?.Trim()));
         }
 
-        tendered = Money(tendered);
-        if (tendered < netTotal)
+        appliedTotal = Money(appliedTotal);
+        changeTotal = Money(changeTotal);
+        if (appliedTotal != netTotal)
         {
-            throw new InvalidOperationException("Payment does not cover the sale total.");
-        }
-
-        if (tendered > netTotal && !hasCash)
-        {
-            throw new InvalidOperationException("Change can only be returned when cash is part of the payment.");
+            throw new InvalidOperationException("Applied payments must exactly match the sale total.");
         }
 
         CashierShiftEntity? shift = null;
@@ -380,8 +400,8 @@ public sealed class LocalPosService(
             LineDiscountTotal = lineDiscountTotal,
             SaleDiscountAmount = saleDiscount,
             NetTotal = netTotal,
-            PaidAmount = netTotal,
-            ChangeAmount = Money(tendered - netTotal),
+            PaidAmount = appliedTotal,
+            ChangeAmount = changeTotal,
             SoldAt = soldAt,
             Notes = request.Notes?.Trim(),
         };
@@ -434,13 +454,16 @@ public sealed class LocalPosService(
         sale.CogsTotal = Money(cogsTotal);
         sale.GrossProfit = Money(sale.NetTotal - sale.CogsTotal);
 
-        foreach (var payment in request.Payments)
+        foreach (var payment in preparedPayments)
         {
             sale.Payments.Add(new SalePaymentEntity
             {
                 MethodCode = payment.MethodCode,
-                Amount = Money(payment.Amount),
-                Reference = payment.Reference?.Trim(),
+                Amount = payment.AppliedAmount,
+                TenderedAmount = payment.TenderedAmount,
+                ChangeAmount = payment.ChangeAmount,
+                Reference = payment.Reference,
+                Notes = payment.Notes,
                 PaidAt = soldAt,
             });
         }
@@ -707,7 +730,9 @@ public sealed class LocalPosService(
         {
             builder.Append(payment.MethodCode).Append(':')
                 .Append(Money(payment.Amount).ToString(CultureInfo.InvariantCulture)).Append(':')
-                .Append(payment.Reference?.Trim()).Append('|');
+                .Append(Money(payment.TenderedAmount ?? payment.Amount).ToString(CultureInfo.InvariantCulture)).Append(':')
+                .Append(payment.Reference?.Trim()).Append(':')
+                .Append(payment.Notes?.Trim()).Append('|');
         }
 
         return Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(builder.ToString())));
@@ -935,6 +960,14 @@ public sealed class LocalPosService(
             Money(Math.Max(0m, subtotal - held.SaleDiscountAmount)),
             held.HeldAt);
     }
+
+    private sealed record PreparedPayment(
+        string MethodCode,
+        decimal AppliedAmount,
+        decimal TenderedAmount,
+        decimal ChangeAmount,
+        string? Reference,
+        string? Notes);
 
     private sealed class PreparedLine(
         ProductUnitEntity productUnit,
