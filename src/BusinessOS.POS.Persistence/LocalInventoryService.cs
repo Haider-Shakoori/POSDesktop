@@ -237,7 +237,7 @@ public sealed class LocalInventoryService(
 
         var baseQuantity = Quantity(request.Quantity * sourceUnit.ConversionFactor);
         var batch = await ResolveBatchAsync(context, product, request.BatchNumber, request.ManufacturedAt, request.ExpiresAt, request.Notes, cancellationToken);
-        var sourceCost = request.UnitCost is null ? null : Cost(request.UnitCost.Value);
+        decimal? sourceCost = request.UnitCost is null ? null : Cost(request.UnitCost.Value);
         var baseCost = sourceCost is null ? product.PurchaseCost : Cost(sourceCost.Value / sourceUnit.ConversionFactor);
 
         var movement = RecordMovement(
