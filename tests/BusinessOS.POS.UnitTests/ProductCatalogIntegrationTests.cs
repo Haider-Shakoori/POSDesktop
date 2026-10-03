@@ -81,7 +81,7 @@ public sealed class ProductCatalogIntegrationTests
             Assert.Equal("TEST-COLA-001", created.Sku);
             Assert.Equal(2, created.Units.Count);
             Assert.Equal(2, created.Barcodes.Count);
-            Assert.Single(created.Barcodes.Where(x => x.IsPrimary));
+            Assert.Single(created.Barcodes, x => x.IsPrimary);
             Assert.Equal(pcs.Id, created.BaseUnitId);
 
             var found = await catalog.GetProductsAsync("9876543210001");

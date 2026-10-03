@@ -575,8 +575,15 @@ public sealed class LocalProductCatalogService(
     private static int FractionalDigits(decimal value)
     {
         value = Math.Abs(value);
-        var bits = decimal.GetBits(value);
-        return (bits[3] >> 16) & 0x7F;
+        var places = 0;
+
+        while (value != decimal.Truncate(value) && places < 28)
+        {
+            value *= 10m;
+            places++;
+        }
+
+        return places;
     }
 
     private static string EscapeJson(string value) =>
