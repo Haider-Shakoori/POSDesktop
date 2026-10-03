@@ -24,7 +24,7 @@
         <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Padding" Value="14,0" />
-        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
     </Style>
 
@@ -37,7 +37,7 @@
                 <Setter Property="Background" Value="{DynamicResource HoverBrush}" />
             </Trigger>
             <Trigger Property="IsSelected" Value="True">
-                <Setter Property="Background" Value="{DynamicResource BrandPrimaryBrush}" />
+                <Setter Property="Background" Value="{DynamicResource TableSelectedBrush}" />
                 <Setter Property="Foreground" Value="White" />
                 <Setter Property="FontWeight" Value="Bold" />
             </Trigger>
@@ -47,7 +47,7 @@
     <Style TargetType="DataGridCell">
         <Setter Property="BorderThickness" Value="0" />
         <Setter Property="Padding" Value="14,0" />
-        <Setter Property="HorizontalContentAlignment" Value="Center" />
+        <Setter Property="HorizontalContentAlignment" Value="Left" />
         <Setter Property="VerticalContentAlignment" Value="Center" />
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="Foreground" Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=DataGridRow}}" />

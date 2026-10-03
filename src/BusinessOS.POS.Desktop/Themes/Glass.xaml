@@ -31,6 +31,7 @@
     <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource BorderColor}" />
     <SolidColorBrush x:Key="HoverBrush" Color="{StaticResource HoverColor}" />
     <SolidColorBrush x:Key="SelectedBrush" Color="{StaticResource SelectedColor}" />
+    <SolidColorBrush x:Key="TableSelectedBrush" Color="#2F6BFF" />
 
     <SolidColorBrush x:Key="SurfaceBrush" Color="#EBFFFFFF" />
     <SolidColorBrush x:Key="SidebarBrush" Color="#AFFFFFFF" />

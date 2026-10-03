@@ -1,12 +1,14 @@
 <Window x:Class="BusinessOS.POS.Desktop.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:pos="clr-namespace:BusinessOS.POS.Desktop.Pos"
         Title="BusinessOS POS"
         Width="1440"
         Height="900"
         MinWidth="1180"
         MinHeight="720"
         WindowStartupLocation="CenterScreen"
+        WindowState="Maximized"
         Background="{DynamicResource AppBackgroundBrush}"
         FontFamily="Segoe UI"
         FlowDirection="{Binding FlowDirection}">
@@ -108,6 +110,10 @@
                     </Border>
                 </StackPanel>
             </ScrollViewer>
+        </DataTemplate>
+
+        <DataTemplate x:Key="PosTemplate">
+            <pos:PosView DataContext="{Binding DataContext.Pos, RelativeSource={RelativeSource AncestorType=Window}}" />
         </DataTemplate>
 
         <DataTemplate x:Key="ModuleTemplate">
@@ -263,6 +269,9 @@
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding SelectedNavigation.Key}" Value="dashboard">
                                     <Setter Property="ContentTemplate" Value="{StaticResource DashboardTemplate}" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectedNavigation.Key}" Value="pos">
+                                    <Setter Property="ContentTemplate" Value="{StaticResource PosTemplate}" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>

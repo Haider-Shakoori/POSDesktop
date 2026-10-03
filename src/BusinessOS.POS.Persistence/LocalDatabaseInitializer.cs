@@ -18,7 +18,10 @@ public sealed class LocalDatabaseInitializer(IDbContextFactory<PosDbContext> con
             await context.Database.ExecuteSqlRawAsync("PRAGMA journal_mode=WAL;", cancellationToken);
             await context.Database.ExecuteSqlRawAsync("PRAGMA foreign_keys=ON;", cancellationToken);
             await context.Database.ExecuteSqlRawAsync("PRAGMA busy_timeout=10000;", cancellationToken);
+
+            await LocalSchemaUpgrade.ApplyAsync(context, cancellationToken);
             await AccessSeed.ApplyAsync(context, cancellationToken);
+            await PosReferenceSeed.ApplyAsync(context, cancellationToken);
         }
         finally
         {
