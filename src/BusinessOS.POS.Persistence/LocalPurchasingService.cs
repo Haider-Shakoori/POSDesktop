@@ -1,6 +1,7 @@
 using System.Globalization;
 using BusinessOS.POS.Application.Abstractions.Authentication;
 using BusinessOS.POS.Application.Abstractions.Purchasing;
+using BusinessOS.POS.Domain.Authentication;
 using BusinessOS.POS.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
 
