@@ -932,14 +932,18 @@ SET ExpectedCash = COALESCE((
         await EnsureColumnAsync(context, "operating_entries", "BusinessDate", "TEXT NOT NULL DEFAULT '0001-01-01 00:00:00'", cancellationToken);
 
         await context.Database.ExecuteSqlRawAsync("""
-UPDATE sales SET BusinessDate = substr(SoldAt, 1, 10) || ' 00:00:00' WHERE BusinessDate LIKE '0001-01-01%';
-UPDATE sale_returns SET BusinessDate = substr(PostedAt, 1, 10) || ' 00:00:00' WHERE BusinessDate LIKE '0001-01-01%';
-UPDATE customer_collections SET BusinessDate = substr(CollectedAt, 1, 10) || ' 00:00:00' WHERE BusinessDate LIKE '0001-01-01%';
-UPDATE goods_receipts SET BusinessDate = substr(ReceivedAt, 1, 10) || ' 00:00:00' WHERE BusinessDate LIKE '0001-01-01%';
-UPDATE purchase_returns SET BusinessDate = substr(PostedAt, 1, 10) || ' 00:00:00' WHERE BusinessDate LIKE '0001-01-01%';
-UPDATE purchase_payments SET BusinessDate = substr(PaidAt, 1, 10) || ' 00:00:00' WHERE BusinessDate LIKE '0001-01-01%';
-UPDATE supplier_payments SET BusinessDate = substr(PaidAt, 1, 10) || ' 00:00:00' WHERE BusinessDate LIKE '0001-01-01%';
-UPDATE operating_entries SET BusinessDate = substr(OccurredAt, 1, 10) || ' 00:00:00' WHERE BusinessDate LIKE '0001-01-01%';
+UPDATE cashier_shifts
+SET BusinessDate = date(OpenedAt, '+4 hours', '+30 minutes') || ' 00:00:00'
+WHERE OpenedAt IS NOT NULL;
+
+UPDATE sales SET BusinessDate = date(SoldAt, '+4 hours', '+30 minutes') || ' 00:00:00' WHERE BusinessDate LIKE '0001-01-01%';
+UPDATE sale_returns SET BusinessDate = date(PostedAt, '+4 hours', '+30 minutes') || ' 00:00:00' WHERE BusinessDate LIKE '0001-01-01%';
+UPDATE customer_collections SET BusinessDate = date(CollectedAt, '+4 hours', '+30 minutes') || ' 00:00:00' WHERE BusinessDate LIKE '0001-01-01%';
+UPDATE goods_receipts SET BusinessDate = date(ReceivedAt, '+4 hours', '+30 minutes') || ' 00:00:00' WHERE BusinessDate LIKE '0001-01-01%';
+UPDATE purchase_returns SET BusinessDate = date(PostedAt, '+4 hours', '+30 minutes') || ' 00:00:00' WHERE BusinessDate LIKE '0001-01-01%';
+UPDATE purchase_payments SET BusinessDate = date(PaidAt, '+4 hours', '+30 minutes') || ' 00:00:00' WHERE BusinessDate LIKE '0001-01-01%';
+UPDATE supplier_payments SET BusinessDate = date(PaidAt, '+4 hours', '+30 minutes') || ' 00:00:00' WHERE BusinessDate LIKE '0001-01-01%';
+UPDATE operating_entries SET BusinessDate = date(OccurredAt, '+4 hours', '+30 minutes') || ' 00:00:00' WHERE BusinessDate LIKE '0001-01-01%';
 
 CREATE INDEX IF NOT EXISTS IX_sales_BusinessDate ON sales (BusinessDate);
 CREATE INDEX IF NOT EXISTS IX_sale_returns_BusinessDate ON sale_returns (BusinessDate);
@@ -1009,20 +1013,20 @@ CREATE UNIQUE INDEX IF NOT EXISTS IX_business_day_closures_day_version
 ON business_day_closures (BusinessDayId, Version);
 
 INSERT OR IGNORE INTO business_days (BusinessDate, Status)
-SELECT BusinessDate, 'open'
+SELECT NormalizedBusinessDate, 'open'
 FROM (
-    SELECT BusinessDate FROM cashier_shifts
-    UNION SELECT BusinessDate FROM sales
-    UNION SELECT BusinessDate FROM sale_returns
-    UNION SELECT BusinessDate FROM customer_collections
-    UNION SELECT BusinessDate FROM goods_receipts
-    UNION SELECT BusinessDate FROM purchase_returns
-    UNION SELECT BusinessDate FROM purchase_payments
-    UNION SELECT BusinessDate FROM supplier_payments
-    UNION SELECT BusinessDate FROM operating_entries
+    SELECT substr(BusinessDate, 1, 10) || ' 00:00:00' AS NormalizedBusinessDate FROM cashier_shifts
+    UNION SELECT substr(BusinessDate, 1, 10) || ' 00:00:00' FROM sales
+    UNION SELECT substr(BusinessDate, 1, 10) || ' 00:00:00' FROM sale_returns
+    UNION SELECT substr(BusinessDate, 1, 10) || ' 00:00:00' FROM customer_collections
+    UNION SELECT substr(BusinessDate, 1, 10) || ' 00:00:00' FROM goods_receipts
+    UNION SELECT substr(BusinessDate, 1, 10) || ' 00:00:00' FROM purchase_returns
+    UNION SELECT substr(BusinessDate, 1, 10) || ' 00:00:00' FROM purchase_payments
+    UNION SELECT substr(BusinessDate, 1, 10) || ' 00:00:00' FROM supplier_payments
+    UNION SELECT substr(BusinessDate, 1, 10) || ' 00:00:00' FROM operating_entries
 )
-WHERE BusinessDate IS NOT NULL
-  AND BusinessDate NOT LIKE '0001-01-01%';
+WHERE NormalizedBusinessDate IS NOT NULL
+  AND NormalizedBusinessDate NOT LIKE '0001-01-01%';
 """;
         await context.Database.ExecuteSqlRawAsync(closingSql, cancellationToken);
 
