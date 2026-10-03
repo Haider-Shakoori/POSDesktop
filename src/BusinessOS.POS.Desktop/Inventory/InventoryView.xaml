@@ -48,7 +48,7 @@
                 </Grid>
             </TabItem>
 
-            <TabItem Header="Opening & Adjustments">
+            <TabItem Header="Opening &amp; Adjustments">
                 <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,14,0,0">
                     <Grid>
                         <Grid.ColumnDefinitions>
