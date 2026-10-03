@@ -445,6 +445,149 @@ SET BusinessDate = substr(OpenedAt, 1, 10)
 WHERE BusinessDate IS NULL;
 """, cancellationToken);
 
+        await context.Database.ExecuteSqlRawAsync("""
+INSERT OR IGNORE INTO terminals (Id, Code, Name, IsActive)
+VALUES (1, 'COUNTER-1', 'Main Counter', 1);
+
+INSERT OR IGNORE INTO cash_movements
+(IdempotencyKey, CashierShiftId, TerminalId, ActorUserId, MovementType, Direction, Amount,
+ ExpectedCashAfter, SourceType, SourceId, ReferenceNumber, Reason, OccurredAt, CreatedAt)
+SELECT 'shift:' || Id || ':opening', Id, TerminalId, UserId, 'opening_float', 'inflow',
+       OpeningCash, OpeningCash, 'cashier_shift', Id, NULL, 'Opening float backfill.', OpenedAt, OpenedAt
+FROM cashier_shifts;
+
+INSERT OR IGNORE INTO cash_movements
+(IdempotencyKey, CashierShiftId, TerminalId, ActorUserId, MovementType, Direction, Amount,
+ ExpectedCashAfter, SourceType, SourceId, ReferenceNumber, Reason, OccurredAt, CreatedAt)
+SELECT 'sale-payment:' || sp.Id, s.CashierShiftId, cs.TerminalId, sp.RecordedByUserId,
+       'cash_sale', 'inflow', sp.Amount, '0', 'sale_payment', sp.Id, s.Number,
+       'Cash sale payment backfill.', sp.PaidAt, sp.PaidAt
+FROM sale_payments sp
+JOIN sales s ON s.Id = sp.SaleId
+JOIN cashier_shifts cs ON cs.Id = s.CashierShiftId
+WHERE sp.MethodCode = 'cash'
+  AND s.CashierShiftId IS NOT NULL
+  AND COALESCE(sp.SourceType, '') <> 'collection';
+
+INSERT OR IGNORE INTO cash_movements
+(IdempotencyKey, CashierShiftId, TerminalId, ActorUserId, MovementType, Direction, Amount,
+ ExpectedCashAfter, SourceType, SourceId, ReferenceNumber, Reason, OccurredAt, CreatedAt)
+SELECT 'customer-collection:' || cc.Id,
+       (SELECT cs.Id FROM cashier_shifts cs
+        WHERE cs.UserId = cc.RecordedByUserId
+          AND cc.CollectedAt >= cs.OpenedAt
+          AND (cs.ClosedAt IS NULL OR cc.CollectedAt <= cs.ClosedAt)
+        ORDER BY cs.Id DESC LIMIT 1),
+       (SELECT cs.TerminalId FROM cashier_shifts cs
+        WHERE cs.UserId = cc.RecordedByUserId
+          AND cc.CollectedAt >= cs.OpenedAt
+          AND (cs.ClosedAt IS NULL OR cc.CollectedAt <= cs.ClosedAt)
+        ORDER BY cs.Id DESC LIMIT 1),
+       cc.RecordedByUserId, 'customer_collection', 'inflow', cc.Amount, '0',
+       'customer_collection', cc.Id, cc.Number, 'Cash customer collection backfill.',
+       cc.CollectedAt, cc.CollectedAt
+FROM customer_collections cc
+WHERE cc.PaymentMethodCode = 'cash'
+  AND EXISTS (
+      SELECT 1 FROM cashier_shifts cs
+      WHERE cs.UserId = cc.RecordedByUserId
+        AND cc.CollectedAt >= cs.OpenedAt
+        AND (cs.ClosedAt IS NULL OR cc.CollectedAt <= cs.ClosedAt));
+
+INSERT OR IGNORE INTO cash_movements
+(IdempotencyKey, CashierShiftId, TerminalId, ActorUserId, MovementType, Direction, Amount,
+ ExpectedCashAfter, SourceType, SourceId, ReferenceNumber, Reason, OccurredAt, CreatedAt)
+SELECT 'purchase-payment:' || pp.Id,
+       (SELECT cs.Id FROM cashier_shifts cs
+        WHERE cs.UserId = pp.RecordedByUserId
+          AND pp.PaidAt >= cs.OpenedAt
+          AND (cs.ClosedAt IS NULL OR pp.PaidAt <= cs.ClosedAt)
+        ORDER BY cs.Id DESC LIMIT 1),
+       (SELECT cs.TerminalId FROM cashier_shifts cs
+        WHERE cs.UserId = pp.RecordedByUserId
+          AND pp.PaidAt >= cs.OpenedAt
+          AND (cs.ClosedAt IS NULL OR pp.PaidAt <= cs.ClosedAt)
+        ORDER BY cs.Id DESC LIMIT 1),
+       pp.RecordedByUserId, 'purchase_payment', 'outflow', pp.Amount, '0',
+       'purchase_payment', pp.Id, NULL, 'Initial cash purchase payment backfill.',
+       pp.PaidAt, pp.PaidAt
+FROM purchase_payments pp
+WHERE pp.MethodCode = 'cash'
+  AND EXISTS (
+      SELECT 1 FROM cashier_shifts cs
+      WHERE cs.UserId = pp.RecordedByUserId
+        AND pp.PaidAt >= cs.OpenedAt
+        AND (cs.ClosedAt IS NULL OR pp.PaidAt <= cs.ClosedAt));
+
+INSERT OR IGNORE INTO cash_movements
+(IdempotencyKey, CashierShiftId, TerminalId, ActorUserId, MovementType, Direction, Amount,
+ ExpectedCashAfter, SourceType, SourceId, ReferenceNumber, Reason, OccurredAt, CreatedAt)
+SELECT 'supplier-payment:' || sp.Id,
+       (SELECT cs.Id FROM cashier_shifts cs
+        WHERE cs.UserId = sp.RecordedByUserId
+          AND sp.PaidAt >= cs.OpenedAt
+          AND (cs.ClosedAt IS NULL OR sp.PaidAt <= cs.ClosedAt)
+        ORDER BY cs.Id DESC LIMIT 1),
+       (SELECT cs.TerminalId FROM cashier_shifts cs
+        WHERE cs.UserId = sp.RecordedByUserId
+          AND sp.PaidAt >= cs.OpenedAt
+          AND (cs.ClosedAt IS NULL OR sp.PaidAt <= cs.ClosedAt)
+        ORDER BY cs.Id DESC LIMIT 1),
+       sp.RecordedByUserId, 'supplier_payment', 'outflow', sp.Amount, '0',
+       'supplier_payment', sp.Id, sp.Number, 'Cash supplier payment backfill.',
+       sp.PaidAt, sp.PaidAt
+FROM supplier_payments sp
+WHERE sp.MethodCode = 'cash'
+  AND EXISTS (
+      SELECT 1 FROM cashier_shifts cs
+      WHERE cs.UserId = sp.RecordedByUserId
+        AND sp.PaidAt >= cs.OpenedAt
+        AND (cs.ClosedAt IS NULL OR sp.PaidAt <= cs.ClosedAt));
+
+INSERT OR IGNORE INTO cash_movements
+(IdempotencyKey, CashierShiftId, TerminalId, ActorUserId, MovementType, Direction, Amount,
+ ExpectedCashAfter, SourceType, SourceId, ReferenceNumber, Reason, OccurredAt, CreatedAt)
+SELECT 'sale-refund:' || sr.Id,
+       (SELECT cs.Id FROM cashier_shifts cs
+        WHERE cs.UserId = sr.RecordedByUserId
+          AND sr.RefundedAt >= cs.OpenedAt
+          AND (cs.ClosedAt IS NULL OR sr.RefundedAt <= cs.ClosedAt)
+        ORDER BY cs.Id DESC LIMIT 1),
+       (SELECT cs.TerminalId FROM cashier_shifts cs
+        WHERE cs.UserId = sr.RecordedByUserId
+          AND sr.RefundedAt >= cs.OpenedAt
+          AND (cs.ClosedAt IS NULL OR sr.RefundedAt <= cs.ClosedAt)
+        ORDER BY cs.Id DESC LIMIT 1),
+       sr.RecordedByUserId, 'sale_refund', 'outflow', sr.Amount, '0',
+       'sale_refund', sr.Id, NULL, 'Cash sale refund backfill.',
+       sr.RefundedAt, sr.RefundedAt
+FROM sale_refunds sr
+WHERE sr.PaymentMethodCode = 'cash'
+  AND EXISTS (
+      SELECT 1 FROM cashier_shifts cs
+      WHERE cs.UserId = sr.RecordedByUserId
+        AND sr.RefundedAt >= cs.OpenedAt
+        AND (cs.ClosedAt IS NULL OR sr.RefundedAt <= cs.ClosedAt));
+
+WITH running AS (
+    SELECT Id,
+           ROUND(SUM(CASE WHEN Direction = 'inflow' THEN CAST(Amount AS REAL) ELSE -CAST(Amount AS REAL) END)
+                 OVER (PARTITION BY CashierShiftId ORDER BY OccurredAt, Id ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW), 2) AS Expected
+    FROM cash_movements
+)
+UPDATE cash_movements
+SET ExpectedCashAfter = CAST((SELECT Expected FROM running WHERE running.Id = cash_movements.Id) AS TEXT);
+
+UPDATE cashier_shifts
+SET ExpectedCash = COALESCE((
+    SELECT cm.ExpectedCashAfter
+    FROM cash_movements cm
+    WHERE cm.CashierShiftId = cashier_shifts.Id
+    ORDER BY cm.OccurredAt DESC, cm.Id DESC
+    LIMIT 1
+), OpeningCash);
+""", cancellationToken);
+
         const string customerSalesSql = """
 CREATE TABLE IF NOT EXISTS customers (
     Id INTEGER NOT NULL CONSTRAINT PK_customers PRIMARY KEY AUTOINCREMENT,
