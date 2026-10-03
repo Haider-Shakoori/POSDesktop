@@ -61,7 +61,8 @@ public sealed class LocalPosService(
         {
             var exactBarcode = await context.ProductBarcodes
                 .AsNoTracking()
-                .Include(x => x.Product)
+                .Include(x => x.ProductUnit)
+                    .ThenInclude(x => x.Product)
                 .Include(x => x.ProductUnit)
                     .ThenInclude(x => x.Unit)
                 .FirstOrDefaultAsync(
