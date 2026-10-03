@@ -1,0 +1,83 @@
+<UserControl x:Class="BusinessOS.POS.Desktop.Expenses.ExpensesView"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ Loaded="OnLoaded">
+ <Grid>
+  <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="14"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+  <Grid>
+   <Grid.ColumnDefinitions>
+    <ColumnDefinition/><ColumnDefinition Width="12"/><ColumnDefinition/><ColumnDefinition Width="12"/><ColumnDefinition/><ColumnDefinition Width="12"/><ColumnDefinition/>
+   </Grid.ColumnDefinitions>
+   <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}">
+    <StackPanel><TextBlock Text="EXPENSES" Style="{StaticResource StatLabelStyle}"/>
+     <TextBlock Text="{Binding ExpenseTotal, StringFormat=AFN {0:N2}}" Style="{StaticResource StatValueStyle}"/></StackPanel>
+   </Border>
+   <Border Grid.Column="2" Style="{StaticResource CardBorderStyle}">
+    <StackPanel><TextBlock Text="OTHER INCOME" Style="{StaticResource StatLabelStyle}"/>
+     <TextBlock Text="{Binding IncomeTotal, StringFormat=AFN {0:N2}}" Style="{StaticResource StatValueStyle}"/></StackPanel>
+   </Border>
+   <Border Grid.Column="4" Style="{StaticResource CardBorderStyle}">
+    <StackPanel><TextBlock Text="NET OPERATING" Style="{StaticResource StatLabelStyle}"/>
+     <TextBlock Text="{Binding NetOperating, StringFormat=AFN {0:N2}}" Style="{StaticResource StatValueStyle}"/></StackPanel>
+   </Border>
+   <Border Grid.Column="6" Style="{StaticResource CardBorderStyle}">
+    <StackPanel><TextBlock Text="ENTRIES" Style="{StaticResource StatLabelStyle}"/>
+     <TextBlock Text="{Binding EntryCount}" Style="{StaticResource StatValueStyle}"/></StackPanel>
+   </Border>
+  </Grid>
+
+  <Grid Grid.Row="2">
+   <Grid.ColumnDefinitions><ColumnDefinition Width="1.7*"/><ColumnDefinition Width="14"/><ColumnDefinition Width="0.9*"/></Grid.ColumnDefinitions>
+   <Border Style="{StaticResource CardBorderStyle}" Padding="0">
+    <Grid>
+     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+     <Grid Margin="16">
+      <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="86"/></Grid.ColumnDefinitions>
+      <StackPanel>
+       <TextBlock Text="Operating entries" Style="{StaticResource SectionTitleStyle}"/>
+       <TextBlock Text="Expenses and other income · AFN only" Style="{StaticResource MutedTextStyle}"/>
+      </StackPanel>
+      <Button Grid.Column="1" Content="Refresh" Command="{Binding RefreshCommand}" Style="{StaticResource SecondaryButtonStyle}"/>
+     </Grid>
+     <DataGrid Grid.Row="1" ItemsSource="{Binding Entries}" AutoGenerateColumns="False" IsReadOnly="True">
+      <DataGrid.Columns>
+       <DataGridTextColumn Header="Number" Binding="{Binding Number}" Width="145"/>
+       <DataGridTextColumn Header="Type" Binding="{Binding EntryType}" Width="85"/>
+       <DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="150"/>
+       <DataGridTextColumn Header="Method" Binding="{Binding PaymentMethod}" Width="110"/>
+       <DataGridTextColumn Header="Amount" Binding="{Binding Amount, StringFormat=N2}" Width="95"/>
+       <DataGridTextColumn Header="Reference" Binding="{Binding Reference}" Width="120"/>
+       <DataGridTextColumn Header="Description" Binding="{Binding Description}" Width="*"/>
+       <DataGridTextColumn Header="Occurred" Binding="{Binding OccurredAt, StringFormat=g}" Width="140"/>
+      </DataGrid.Columns>
+     </DataGrid>
+    </Grid>
+   </Border>
+
+   <Border Grid.Column="2" Style="{StaticResource CardBorderStyle}">
+    <StackPanel>
+     <TextBlock Text="Record operating entry" Style="{StaticResource SectionTitleStyle}"/>
+     <TextBlock Text="Cash entries automatically affect the current drawer. Non-cash entries do not."
+                Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" Margin="0,4,0,12"/>
+     <TextBlock Text="Type" Style="{StaticResource MutedTextStyle}"/>
+     <ComboBox ItemsSource="{Binding EntryTypes}" SelectedItem="{Binding SelectedEntryType}" Margin="0,3,0,0"/>
+     <TextBlock Text="Category" Style="{StaticResource MutedTextStyle}" Margin="0,9,0,0"/>
+     <ComboBox ItemsSource="{Binding FilteredCategories}" SelectedItem="{Binding SelectedCategory}"
+               DisplayMemberPath="Name" Margin="0,3,0,0"/>
+     <TextBlock Text="Payment method" Style="{StaticResource MutedTextStyle}" Margin="0,9,0,0"/>
+     <ComboBox ItemsSource="{Binding PaymentMethods}" SelectedItem="{Binding SelectedPaymentMethod}"
+               DisplayMemberPath="Name" Margin="0,3,0,0"/>
+     <TextBlock Text="Amount (AFN)" Style="{StaticResource MutedTextStyle}" Margin="0,9,0,0"/>
+     <TextBox Text="{Binding Amount}" Margin="0,3,0,0"/>
+     <TextBlock Text="Date" Style="{StaticResource MutedTextStyle}" Margin="0,9,0,0"/>
+     <DatePicker SelectedDate="{Binding OccurredDate}" Margin="0,3,0,0"/>
+     <TextBox Text="{Binding Reference}" ToolTip="Reference" Margin="0,9,0,0"/>
+     <TextBox Text="{Binding Description}" ToolTip="Description" AcceptsReturn="True" Height="70" Margin="0,8,0,0"/>
+     <Button Content="Record Entry" Command="{Binding RecordCommand}" Style="{StaticResource PrimaryButtonStyle}" Height="42" Margin="0,12,0,0"/>
+     <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,14"/>
+     <TextBlock Text="{Binding StatusMessage}" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap"/>
+    </StackPanel>
+   </Border>
+  </Grid>
+ </Grid>
+</UserControl>

@@ -719,6 +719,15 @@ public sealed class LocalPurchasingService(
             context.PurchasePayments.Add(payment);
             await context.SaveChangesAsync(cancellationToken);
 
+            if (payment.MethodCode == "cash")
+            {
+                await CashLedgerEngine.RecordAsync(
+                    context, user.UserId, payment.Amount,
+                    "outflow", "purchase_payment", "purchase_payment", payment.Id,
+                    receipt.Number, "Initial cash purchase payment", receivedAt,
+                    "purchase-payment:" + payment.Id, null, cancellationToken);
+            }
+
             await SupplierLedgerWriter.DebitAsync(
                 context, supplier, paidAmount,
                 "initial_purchase_payment", "purchase_payment", payment.Id, null,
@@ -997,6 +1006,15 @@ public sealed class LocalPurchasingService(
             receipt.PaidAmount = Money(receipt.PaidAmount + take);
             receipt.BalanceDue = Money(receipt.BalanceDue - take);
             remaining = Money(remaining - take);
+        }
+
+        if (method == "cash")
+        {
+            await CashLedgerEngine.RecordAsync(
+                context, user.UserId, payment.Amount,
+                "outflow", "supplier_payment", "supplier_payment", payment.Id,
+                payment.Number, "Cash supplier payment", paidAt,
+                "supplier-payment:" + payment.Id, null, cancellationToken);
         }
 
         await SupplierLedgerWriter.DebitAsync(

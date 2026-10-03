@@ -150,40 +150,58 @@ public sealed class LocalPosService(
         CancellationToken cancellationToken = default)
     {
         authorizer.Demand("shifts.open");
-        if (openingCash < 0m)
-        {
-            throw new InvalidOperationException("Opening cash cannot be negative.");
-        }
+        if (openingCash < 0m) throw new InvalidOperationException("Opening cash cannot be negative.");
 
         var user = RequireUser();
         await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
 
         var existing = await context.CashierShifts
             .Where(x => x.UserId == user.UserId && x.Status == "open")
             .OrderByDescending(x => x.Id)
             .FirstOrDefaultAsync(cancellationToken);
-
         if (existing is not null)
         {
+            await CashLedgerEngine.EnsureOpeningMovementAsync(context, existing, user.UserId, cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
             return new PosShiftState(true, existing.Id, existing.OpeningCash, existing.OpenedAt);
         }
 
+        var terminal = await context.Terminals
+            .Where(x => x.IsActive)
+            .OrderBy(x => x.Id)
+            .FirstOrDefaultAsync(cancellationToken)
+            ?? throw new InvalidOperationException("No active POS terminal is configured.");
+
+        if (await context.CashierShifts.AnyAsync(
+            x => x.TerminalId == terminal.Id && x.Status == "open", cancellationToken))
+            throw new InvalidOperationException("The default POS terminal already has an open cashier shift.");
+
+        var now = DateTimeOffset.UtcNow;
         var shift = new CashierShiftEntity
         {
+            TerminalId = terminal.Id,
             UserId = user.UserId,
+            BusinessDate = DateTime.Today,
+            OpenIdempotencyKey = Guid.NewGuid().ToString(),
             OpeningCash = Money(openingCash),
+            ExpectedCash = Money(openingCash),
             Status = "open",
-            OpenedAt = DateTimeOffset.UtcNow,
+            OpenedAt = now,
         };
         context.CashierShifts.Add(shift);
+        await context.SaveChangesAsync(cancellationToken);
+        await CashLedgerEngine.EnsureOpeningMovementAsync(context, shift, user.UserId, cancellationToken);
+
         context.AuditLogs.Add(new AuditLogEntity
         {
             ActorUserId = user.UserId,
             Event = "cash.shift.opened",
-            CreatedAt = DateTimeOffset.UtcNow,
+            CreatedAt = now,
             DetailsJson = "{\"opening_cash\":\"" + Money(openingCash).ToString("0.00", CultureInfo.InvariantCulture) + "\"}",
         });
         await context.SaveChangesAsync(cancellationToken);
+        await transaction.CommitAsync(cancellationToken);
 
         return new PosShiftState(true, shift.Id, shift.OpeningCash, shift.OpenedAt);
     }
@@ -525,6 +543,15 @@ public sealed class LocalPosService(
             };
             sale.Payments.Add(salePayment);
             await context.SaveChangesAsync(cancellationToken);
+
+            if (paymentMethods[payment.MethodCode].IsCash)
+            {
+                await CashLedgerEngine.RecordAsync(
+                    context, user.UserId, salePayment.Amount,
+                    "inflow", "cash_sale", "sale_payment", salePayment.Id,
+                    sale.Number, "Cash sale payment", soldAt,
+                    "sale-payment:" + salePayment.Id, shift?.Id, cancellationToken);
+            }
 
             if (customer is not null)
             {

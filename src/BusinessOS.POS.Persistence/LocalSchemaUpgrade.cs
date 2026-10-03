@@ -339,6 +339,114 @@ SET TenderedAmount = Amount
 WHERE TenderedAmount = '0';
 """, cancellationToken);
 
+
+        const string cashSql = """
+CREATE TABLE IF NOT EXISTS terminals (
+    Id INTEGER NOT NULL CONSTRAINT PK_terminals PRIMARY KEY AUTOINCREMENT,
+    Code TEXT NOT NULL,
+    Name TEXT NOT NULL,
+    IsActive INTEGER NOT NULL DEFAULT 1
+);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_terminals_Code ON terminals (Code);
+
+CREATE TABLE IF NOT EXISTS expense_categories (
+    Id INTEGER NOT NULL CONSTRAINT PK_expense_categories PRIMARY KEY AUTOINCREMENT,
+    Code TEXT NOT NULL,
+    EntryType TEXT NOT NULL,
+    NameEn TEXT NOT NULL,
+    NameFa TEXT NULL,
+    NamePs TEXT NULL,
+    IsActive INTEGER NOT NULL DEFAULT 1,
+    SortOrder INTEGER NOT NULL DEFAULT 0
+);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_expense_categories_Code ON expense_categories (Code);
+
+CREATE TABLE IF NOT EXISTS operating_entries (
+    Id INTEGER NOT NULL CONSTRAINT PK_operating_entries PRIMARY KEY AUTOINCREMENT,
+    Number TEXT NOT NULL,
+    IdempotencyKey TEXT NOT NULL,
+    ExpenseCategoryId INTEGER NOT NULL,
+    PaymentMethodId INTEGER NOT NULL,
+    RecordedByUserId INTEGER NOT NULL,
+    EntryType TEXT NOT NULL,
+    Amount TEXT NOT NULL,
+    Reference TEXT NULL,
+    Description TEXT NULL,
+    OccurredAt TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_operating_entries_Number ON operating_entries (Number);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_operating_entries_IdempotencyKey ON operating_entries (IdempotencyKey);
+
+CREATE TABLE IF NOT EXISTS cash_movements (
+    Id INTEGER NOT NULL CONSTRAINT PK_cash_movements PRIMARY KEY AUTOINCREMENT,
+    IdempotencyKey TEXT NOT NULL,
+    CashierShiftId INTEGER NOT NULL,
+    TerminalId INTEGER NOT NULL,
+    ActorUserId INTEGER NULL,
+    MovementType TEXT NOT NULL,
+    Direction TEXT NOT NULL,
+    Amount TEXT NOT NULL,
+    ExpectedCashAfter TEXT NOT NULL,
+    SourceType TEXT NULL,
+    SourceId INTEGER NULL,
+    ReferenceNumber TEXT NULL,
+    Reason TEXT NULL,
+    OccurredAt TEXT NOT NULL,
+    CreatedAt TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_cash_movements_IdempotencyKey ON cash_movements (IdempotencyKey);
+CREATE INDEX IF NOT EXISTS IX_cash_movements_shift_id ON cash_movements (CashierShiftId, Id);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_cash_movements_unique_source
+ON cash_movements (SourceType, SourceId, MovementType);
+
+CREATE TABLE IF NOT EXISTS cashier_shift_closures (
+    Id INTEGER NOT NULL CONSTRAINT PK_cashier_shift_closures PRIMARY KEY AUTOINCREMENT,
+    IdempotencyKey TEXT NOT NULL,
+    CashierShiftId INTEGER NOT NULL,
+    Version INTEGER NOT NULL,
+    ClosedByUserId INTEGER NOT NULL,
+    ExpectedCash TEXT NOT NULL,
+    ActualCash TEXT NOT NULL,
+    Variance TEXT NOT NULL,
+    Tolerance TEXT NOT NULL,
+    WithinTolerance INTEGER NOT NULL,
+    VarianceReason TEXT NULL,
+    ClosingNotes TEXT NULL,
+    ClosedAt TEXT NOT NULL,
+    CreatedAt TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_cashier_shift_closures_IdempotencyKey ON cashier_shift_closures (IdempotencyKey);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_cashier_shift_closures_shift_version
+ON cashier_shift_closures (CashierShiftId, Version);
+""";
+        await context.Database.ExecuteSqlRawAsync(cashSql, cancellationToken);
+
+        await EnsureColumnAsync(context, "cashier_shifts", "TerminalId", "INTEGER NOT NULL DEFAULT 1", cancellationToken);
+        await EnsureColumnAsync(context, "cashier_shifts", "BusinessDate", "TEXT NULL", cancellationToken);
+        await EnsureColumnAsync(context, "cashier_shifts", "OpenIdempotencyKey", "TEXT NULL", cancellationToken);
+        await EnsureColumnAsync(context, "cashier_shifts", "ExpectedCash", "TEXT NOT NULL DEFAULT '0'", cancellationToken);
+        await EnsureColumnAsync(context, "cashier_shifts", "ActualCash", "TEXT NULL", cancellationToken);
+        await EnsureColumnAsync(context, "cashier_shifts", "Variance", "TEXT NULL", cancellationToken);
+        await EnsureColumnAsync(context, "cashier_shifts", "VarianceWithinTolerance", "INTEGER NULL", cancellationToken);
+        await EnsureColumnAsync(context, "cashier_shifts", "VarianceReason", "TEXT NULL", cancellationToken);
+        await EnsureColumnAsync(context, "cashier_shifts", "ClosingNotes", "TEXT NULL", cancellationToken);
+        await EnsureColumnAsync(context, "cashier_shifts", "ClosedByUserId", "INTEGER NULL", cancellationToken);
+        await EnsureColumnAsync(context, "cashier_shifts", "ReopenedAt", "TEXT NULL", cancellationToken);
+        await EnsureColumnAsync(context, "cashier_shifts", "ReopenedByUserId", "INTEGER NULL", cancellationToken);
+
+        await context.Database.ExecuteSqlRawAsync("""
+CREATE UNIQUE INDEX IF NOT EXISTS IX_cashier_shifts_OpenIdempotencyKey
+ON cashier_shifts (OpenIdempotencyKey)
+WHERE OpenIdempotencyKey IS NOT NULL;
+CREATE INDEX IF NOT EXISTS IX_cashier_shifts_TerminalId_Status ON cashier_shifts (TerminalId, Status);
+UPDATE cashier_shifts
+SET ExpectedCash = OpeningCash
+WHERE CAST(ExpectedCash AS REAL) = 0 AND CAST(OpeningCash AS REAL) <> 0;
+UPDATE cashier_shifts
+SET BusinessDate = substr(OpenedAt, 1, 10)
+WHERE BusinessDate IS NULL;
+""", cancellationToken);
+
         const string customerSalesSql = """
 CREATE TABLE IF NOT EXISTS customers (
     Id INTEGER NOT NULL CONSTRAINT PK_customers PRIMARY KEY AUTOINCREMENT,
@@ -670,6 +778,149 @@ CREATE TABLE IF NOT EXISTS purchase_return_items (
 );
 """;
         await context.Database.ExecuteSqlRawAsync(purchasingSql, cancellationToken);
+
+        await context.Database.ExecuteSqlRawAsync("""
+INSERT OR IGNORE INTO terminals (Id, Code, Name, IsActive)
+VALUES (1, 'COUNTER-1', 'Main Counter', 1);
+
+INSERT OR IGNORE INTO cash_movements
+(IdempotencyKey, CashierShiftId, TerminalId, ActorUserId, MovementType, Direction, Amount,
+ ExpectedCashAfter, SourceType, SourceId, ReferenceNumber, Reason, OccurredAt, CreatedAt)
+SELECT 'shift:' || Id || ':opening', Id, TerminalId, UserId, 'opening_float', 'inflow',
+       OpeningCash, OpeningCash, 'cashier_shift', Id, NULL, 'Opening float backfill.', OpenedAt, OpenedAt
+FROM cashier_shifts;
+
+INSERT OR IGNORE INTO cash_movements
+(IdempotencyKey, CashierShiftId, TerminalId, ActorUserId, MovementType, Direction, Amount,
+ ExpectedCashAfter, SourceType, SourceId, ReferenceNumber, Reason, OccurredAt, CreatedAt)
+SELECT 'sale-payment:' || sp.Id, s.CashierShiftId, cs.TerminalId, sp.RecordedByUserId,
+       'cash_sale', 'inflow', sp.Amount, '0', 'sale_payment', sp.Id, s.Number,
+       'Cash sale payment backfill.', sp.PaidAt, sp.PaidAt
+FROM sale_payments sp
+JOIN sales s ON s.Id = sp.SaleId
+JOIN cashier_shifts cs ON cs.Id = s.CashierShiftId
+WHERE sp.MethodCode = 'cash'
+  AND s.CashierShiftId IS NOT NULL
+  AND COALESCE(sp.SourceType, '') <> 'collection';
+
+INSERT OR IGNORE INTO cash_movements
+(IdempotencyKey, CashierShiftId, TerminalId, ActorUserId, MovementType, Direction, Amount,
+ ExpectedCashAfter, SourceType, SourceId, ReferenceNumber, Reason, OccurredAt, CreatedAt)
+SELECT 'customer-collection:' || cc.Id,
+       (SELECT cs.Id FROM cashier_shifts cs
+        WHERE cs.UserId = cc.RecordedByUserId
+          AND cc.CollectedAt >= cs.OpenedAt
+          AND (cs.ClosedAt IS NULL OR cc.CollectedAt <= cs.ClosedAt)
+        ORDER BY cs.Id DESC LIMIT 1),
+       (SELECT cs.TerminalId FROM cashier_shifts cs
+        WHERE cs.UserId = cc.RecordedByUserId
+          AND cc.CollectedAt >= cs.OpenedAt
+          AND (cs.ClosedAt IS NULL OR cc.CollectedAt <= cs.ClosedAt)
+        ORDER BY cs.Id DESC LIMIT 1),
+       cc.RecordedByUserId, 'customer_collection', 'inflow', cc.Amount, '0',
+       'customer_collection', cc.Id, cc.Number, 'Cash customer collection backfill.',
+       cc.CollectedAt, cc.CollectedAt
+FROM customer_collections cc
+WHERE cc.PaymentMethodCode = 'cash'
+  AND EXISTS (
+      SELECT 1 FROM cashier_shifts cs
+      WHERE cs.UserId = cc.RecordedByUserId
+        AND cc.CollectedAt >= cs.OpenedAt
+        AND (cs.ClosedAt IS NULL OR cc.CollectedAt <= cs.ClosedAt));
+
+INSERT OR IGNORE INTO cash_movements
+(IdempotencyKey, CashierShiftId, TerminalId, ActorUserId, MovementType, Direction, Amount,
+ ExpectedCashAfter, SourceType, SourceId, ReferenceNumber, Reason, OccurredAt, CreatedAt)
+SELECT 'purchase-payment:' || pp.Id,
+       (SELECT cs.Id FROM cashier_shifts cs
+        WHERE cs.UserId = pp.RecordedByUserId
+          AND pp.PaidAt >= cs.OpenedAt
+          AND (cs.ClosedAt IS NULL OR pp.PaidAt <= cs.ClosedAt)
+        ORDER BY cs.Id DESC LIMIT 1),
+       (SELECT cs.TerminalId FROM cashier_shifts cs
+        WHERE cs.UserId = pp.RecordedByUserId
+          AND pp.PaidAt >= cs.OpenedAt
+          AND (cs.ClosedAt IS NULL OR pp.PaidAt <= cs.ClosedAt)
+        ORDER BY cs.Id DESC LIMIT 1),
+       pp.RecordedByUserId, 'purchase_payment', 'outflow', pp.Amount, '0',
+       'purchase_payment', pp.Id, NULL, 'Initial cash purchase payment backfill.',
+       pp.PaidAt, pp.PaidAt
+FROM purchase_payments pp
+WHERE pp.MethodCode = 'cash'
+  AND EXISTS (
+      SELECT 1 FROM cashier_shifts cs
+      WHERE cs.UserId = pp.RecordedByUserId
+        AND pp.PaidAt >= cs.OpenedAt
+        AND (cs.ClosedAt IS NULL OR pp.PaidAt <= cs.ClosedAt));
+
+INSERT OR IGNORE INTO cash_movements
+(IdempotencyKey, CashierShiftId, TerminalId, ActorUserId, MovementType, Direction, Amount,
+ ExpectedCashAfter, SourceType, SourceId, ReferenceNumber, Reason, OccurredAt, CreatedAt)
+SELECT 'supplier-payment:' || sp.Id,
+       (SELECT cs.Id FROM cashier_shifts cs
+        WHERE cs.UserId = sp.RecordedByUserId
+          AND sp.PaidAt >= cs.OpenedAt
+          AND (cs.ClosedAt IS NULL OR sp.PaidAt <= cs.ClosedAt)
+        ORDER BY cs.Id DESC LIMIT 1),
+       (SELECT cs.TerminalId FROM cashier_shifts cs
+        WHERE cs.UserId = sp.RecordedByUserId
+          AND sp.PaidAt >= cs.OpenedAt
+          AND (cs.ClosedAt IS NULL OR sp.PaidAt <= cs.ClosedAt)
+        ORDER BY cs.Id DESC LIMIT 1),
+       sp.RecordedByUserId, 'supplier_payment', 'outflow', sp.Amount, '0',
+       'supplier_payment', sp.Id, sp.Number, 'Cash supplier payment backfill.',
+       sp.PaidAt, sp.PaidAt
+FROM supplier_payments sp
+WHERE sp.MethodCode = 'cash'
+  AND EXISTS (
+      SELECT 1 FROM cashier_shifts cs
+      WHERE cs.UserId = sp.RecordedByUserId
+        AND sp.PaidAt >= cs.OpenedAt
+        AND (cs.ClosedAt IS NULL OR sp.PaidAt <= cs.ClosedAt));
+
+INSERT OR IGNORE INTO cash_movements
+(IdempotencyKey, CashierShiftId, TerminalId, ActorUserId, MovementType, Direction, Amount,
+ ExpectedCashAfter, SourceType, SourceId, ReferenceNumber, Reason, OccurredAt, CreatedAt)
+SELECT 'sale-refund:' || sr.Id,
+       (SELECT cs.Id FROM cashier_shifts cs
+        WHERE cs.UserId = sr.RecordedByUserId
+          AND sr.RefundedAt >= cs.OpenedAt
+          AND (cs.ClosedAt IS NULL OR sr.RefundedAt <= cs.ClosedAt)
+        ORDER BY cs.Id DESC LIMIT 1),
+       (SELECT cs.TerminalId FROM cashier_shifts cs
+        WHERE cs.UserId = sr.RecordedByUserId
+          AND sr.RefundedAt >= cs.OpenedAt
+          AND (cs.ClosedAt IS NULL OR sr.RefundedAt <= cs.ClosedAt)
+        ORDER BY cs.Id DESC LIMIT 1),
+       sr.RecordedByUserId, 'sale_refund', 'outflow', sr.Amount, '0',
+       'sale_refund', sr.Id, NULL, 'Cash sale refund backfill.',
+       sr.RefundedAt, sr.RefundedAt
+FROM sale_refunds sr
+WHERE sr.PaymentMethodCode = 'cash'
+  AND EXISTS (
+      SELECT 1 FROM cashier_shifts cs
+      WHERE cs.UserId = sr.RecordedByUserId
+        AND sr.RefundedAt >= cs.OpenedAt
+        AND (cs.ClosedAt IS NULL OR sr.RefundedAt <= cs.ClosedAt));
+
+WITH running AS (
+    SELECT Id,
+           ROUND(SUM(CASE WHEN Direction = 'inflow' THEN CAST(Amount AS REAL) ELSE -CAST(Amount AS REAL) END)
+                 OVER (PARTITION BY CashierShiftId ORDER BY OccurredAt, Id ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW), 2) AS Expected
+    FROM cash_movements
+)
+UPDATE cash_movements
+SET ExpectedCashAfter = CAST((SELECT Expected FROM running WHERE running.Id = cash_movements.Id) AS TEXT);
+
+UPDATE cashier_shifts
+SET ExpectedCash = COALESCE((
+    SELECT cm.ExpectedCashAfter
+    FROM cash_movements cm
+    WHERE cm.CashierShiftId = cashier_shifts.Id
+    ORDER BY cm.OccurredAt DESC, cm.Id DESC
+    LIMIT 1
+), OpeningCash);
+""", cancellationToken);
 
         await context.Database.ExecuteSqlRawAsync("""
 UPDATE sales

@@ -254,7 +254,7 @@ public sealed class LocalSaleReturnService(
         for (var i = 0; i < refunds.Count; i++)
         {
             var refund = refunds[i];
-            context.SaleRefunds.Add(new SaleRefundEntity
+            var refundEntity = new SaleRefundEntity
             {
                 IdempotencyKey = idempotencyKey + ":refund:" + i,
                 SaleReturnId = saleReturn.Id,
@@ -264,7 +264,18 @@ public sealed class LocalSaleReturnService(
                 Reference = refund.Reference,
                 RefundedAt = postedAt,
                 Notes = refund.Notes,
-            });
+            };
+            context.SaleRefunds.Add(refundEntity);
+            await context.SaveChangesAsync(cancellationToken);
+
+            if (refund.Method.IsCash)
+            {
+                await CashLedgerEngine.RecordAsync(
+                    context, user.UserId, refundEntity.Amount,
+                    "outflow", "sale_refund", "sale_refund", refundEntity.Id,
+                    saleReturn.Number, "Cash sale refund", postedAt,
+                    "sale-refund:" + refundEntity.Id, null, cancellationToken);
+            }
         }
 
         sale.ReturnedTotal = Money(sale.ReturnedTotal + returnTotal);
