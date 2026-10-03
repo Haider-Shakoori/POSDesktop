@@ -95,18 +95,32 @@ public sealed class LocalSalesService(
         var paymentMethods = await context.PaymentMethods.AsNoTracking()
             .ToDictionaryAsync(x => x.Code, StringComparer.OrdinalIgnoreCase, cancellationToken);
 
-        var items = sale.Items.OrderBy(x => x.Id).Select(x => new SaleDetailLine(
-            x.SkuSnapshot,
-            x.ProductNameSnapshot,
-            x.UnitNameSnapshot,
-            x.Quantity,
-            x.UnitPrice,
-            x.LineSubtotal,
-            x.LineDiscountAmount,
-            x.AllocatedSaleDiscount,
-            x.LineNetTotal,
-            canViewProfit ? x.CogsAmount : 0m,
-            canViewProfit ? x.GrossProfit : 0m)).ToList();
+        var saleItemIds = sale.Items.Select(x => x.Id).ToList();
+        var returned = await context.SaleReturnItems.AsNoTracking()
+            .Where(x => saleItemIds.Contains(x.SaleItemId))
+            .GroupBy(x => x.SaleItemId)
+            .Select(x => new { SaleItemId = x.Key, Quantity = x.Sum(i => i.Quantity) })
+            .ToDictionaryAsync(x => x.SaleItemId, x => x.Quantity, cancellationToken);
+
+        var items = sale.Items.OrderBy(x => x.Id).Select(x =>
+        {
+            var returnedQuantity = returned.GetValueOrDefault(x.Id, 0m);
+            return new SaleDetailLine(
+                x.Id,
+                x.SkuSnapshot,
+                x.ProductNameSnapshot,
+                x.UnitNameSnapshot,
+                x.Quantity,
+                x.UnitPrice,
+                x.LineSubtotal,
+                x.LineDiscountAmount,
+                x.AllocatedSaleDiscount,
+                x.LineNetTotal,
+                canViewProfit ? x.CogsAmount : 0m,
+                canViewProfit ? x.GrossProfit : 0m,
+                returnedQuantity,
+                Math.Max(0m, x.Quantity - returnedQuantity));
+        }).ToList();
 
         var payments = sale.Payments.OrderBy(x => x.Id).Select(x =>
         {
@@ -133,6 +147,7 @@ public sealed class LocalSalesService(
             cashier?.Name ?? "Unknown",
             sale.Status,
             sale.PaymentStatus,
+            sale.CustomerId,
             sale.Subtotal,
             sale.LineDiscountTotal,
             sale.SaleDiscountAmount,
@@ -141,6 +156,9 @@ public sealed class LocalSalesService(
             canViewProfit ? sale.GrossProfit : 0m,
             sale.PaidAmount,
             sale.ChangeAmount,
+            sale.BalanceDue,
+            sale.ReturnedTotal,
+            sale.RefundedTotal,
             sale.SoldAt,
             sale.Notes,
             items,
