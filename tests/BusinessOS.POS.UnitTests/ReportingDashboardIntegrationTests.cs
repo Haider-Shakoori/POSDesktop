@@ -291,6 +291,30 @@ public sealed class ReportingDashboardIntegrationTests
     }
 
     [Fact]
+    public async Task Cashier_without_reports_view_permission_cannot_build_or_export_reports()
+    {
+        var root = NewRoot();
+        try
+        {
+            await using var provider = await BuildProviderAsync(root);
+            await CreateCashierAsync(provider);
+
+            var sessions = provider.GetRequiredService<IUserSessionService>();
+            await sessions.LogoutAsync();
+            await sessions.LoginAsync("cashier", "Password-123");
+
+            var reports = provider.GetRequiredService<IReportingService>();
+            await Assert.ThrowsAsync<PermissionDeniedException>(() =>
+                reports.BuildAsync(new ReportFilters(DateTime.Today, DateTime.Today)));
+            await Assert.ThrowsAsync<PermissionDeniedException>(() =>
+                reports.GetLookupsAsync());
+            await Assert.ThrowsAsync<PermissionDeniedException>(() =>
+                reports.GetSalesExportAsync(new ReportFilters(DateTime.Today, DateTime.Today)));
+        }
+        finally { Cleanup(root); }
+    }
+
+    [Fact]
     public async Task Report_viewer_without_profit_permission_receives_no_profit_fields()
     {
         var root = NewRoot();
@@ -429,6 +453,33 @@ public sealed class ReportingDashboardIntegrationTests
             [],
             []));
         return (saved.Id, saved.Units.Single(x => x.UnitId == pcs.Id).Id);
+    }
+
+    private static async Task CreateCashierAsync(ServiceProvider provider)
+    {
+        var factory = provider.GetRequiredService<IDbContextFactory<PosDbContext>>();
+        var hasher = provider.GetRequiredService<PasswordHasher>();
+        await using var context = await factory.CreateDbContextAsync();
+
+        var role = await context.Roles
+            .Include(x => x.Permissions)
+            .SingleAsync(x => x.Name == "cashier");
+
+        var now = DateTimeOffset.UtcNow;
+        var user = new UserEntity
+        {
+            Name = "Test Cashier",
+            Username = "cashier",
+            NormalizedUsername = "cashier",
+            PasswordHash = hasher.Hash("Password-123"),
+            PreferredLocale = "en",
+            IsActive = true,
+            CreatedAt = now,
+            UpdatedAt = now,
+        };
+        user.Roles.Add(role);
+        context.Users.Add(user);
+        await context.SaveChangesAsync();
     }
 
     private static async Task CreateReportViewerAsync(ServiceProvider provider)
