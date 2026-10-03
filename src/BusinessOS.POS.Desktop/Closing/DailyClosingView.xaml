@@ -1,0 +1,212 @@
+<UserControl x:Class="BusinessOS.POS.Desktop.Closing.DailyClosingView"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ Loaded="OnLoaded">
+ <Grid>
+  <Grid.RowDefinitions>
+   <RowDefinition Height="Auto"/>
+   <RowDefinition Height="14"/>
+   <RowDefinition Height="Auto"/>
+   <RowDefinition Height="14"/>
+   <RowDefinition Height="*"/>
+  </Grid.RowDefinitions>
+
+  <Border Style="{StaticResource CardBorderStyle}">
+   <Grid>
+    <Grid.ColumnDefinitions>
+     <ColumnDefinition Width="Auto"/>
+     <ColumnDefinition Width="12"/>
+     <ColumnDefinition/>
+     <ColumnDefinition Width="12"/>
+     <ColumnDefinition Width="100"/>
+    </Grid.ColumnDefinitions>
+    <StackPanel>
+     <TextBlock Text="Business date" Style="{StaticResource MutedTextStyle}"/>
+     <DatePicker SelectedDate="{Binding SelectedDate}" Margin="0,4,0,0" Width="150"/>
+    </StackPanel>
+    <StackPanel Grid.Column="2" VerticalAlignment="Center">
+     <TextBlock Text="{Binding DayStatus, StringFormat=Status: {0}}" Style="{StaticResource SectionTitleStyle}"/>
+     <TextBlock Text="{Binding StatusMessage}" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap"/>
+    </StackPanel>
+    <Button Grid.Column="4" Content="Refresh" Command="{Binding RefreshCommand}" Style="{StaticResource SecondaryButtonStyle}"/>
+   </Grid>
+  </Border>
+
+  <Grid Grid.Row="2">
+   <Grid.ColumnDefinitions>
+    <ColumnDefinition/><ColumnDefinition Width="10"/>
+    <ColumnDefinition/><ColumnDefinition Width="10"/>
+    <ColumnDefinition/><ColumnDefinition Width="10"/>
+    <ColumnDefinition/><ColumnDefinition Width="10"/>
+    <ColumnDefinition/><ColumnDefinition Width="10"/>
+    <ColumnDefinition/>
+   </Grid.ColumnDefinitions>
+   <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}">
+    <StackPanel><TextBlock Text="NET SALES" Style="{StaticResource StatLabelStyle}"/>
+     <TextBlock Text="{Binding NetSales, StringFormat=AFN {0:N2}}" Style="{StaticResource StatValueStyle}"/>
+     <TextBlock Text="{Binding SalesCount, StringFormat={}{0} sales}" Style="{StaticResource MutedTextStyle}"/></StackPanel>
+   </Border>
+   <Border Grid.Column="2" Style="{StaticResource CardBorderStyle}">
+    <StackPanel><TextBlock Text="GROSS PROFIT" Style="{StaticResource StatLabelStyle}"/>
+     <TextBlock Text="{Binding GrossProfit, StringFormat=AFN {0:N2}}" Style="{StaticResource StatValueStyle}"/></StackPanel>
+   </Border>
+   <Border Grid.Column="4" Style="{StaticResource CardBorderStyle}">
+    <StackPanel><TextBlock Text="NET PROFIT" Style="{StaticResource StatLabelStyle}"/>
+     <TextBlock Text="{Binding NetProfit, StringFormat=AFN {0:N2}}" Style="{StaticResource StatValueStyle}"/></StackPanel>
+   </Border>
+   <Border Grid.Column="6" Style="{StaticResource CardBorderStyle}">
+    <StackPanel><TextBlock Text="EXPECTED CASH" Style="{StaticResource StatLabelStyle}"/>
+     <TextBlock Text="{Binding ExpectedCash, StringFormat=AFN {0:N2}}" Style="{StaticResource StatValueStyle}"/></StackPanel>
+   </Border>
+   <Border Grid.Column="8" Style="{StaticResource CardBorderStyle}">
+    <StackPanel><TextBlock Text="ACTUAL CASH" Style="{StaticResource StatLabelStyle}"/>
+     <TextBlock Text="{Binding ActualCash, StringFormat=AFN {0:N2}}" Style="{StaticResource StatValueStyle}"/></StackPanel>
+   </Border>
+   <Border Grid.Column="10" Style="{StaticResource CardBorderStyle}">
+    <StackPanel><TextBlock Text="VARIANCE" Style="{StaticResource StatLabelStyle}"/>
+     <TextBlock Text="{Binding Variance, StringFormat=AFN {0:N2}}" Style="{StaticResource StatValueStyle}"/>
+     <TextBlock Text="{Binding OpenShiftCount, StringFormat={}{0} open shifts}" Style="{StaticResource MutedTextStyle}"/></StackPanel>
+   </Border>
+  </Grid>
+
+  <Grid Grid.Row="4">
+   <Grid.ColumnDefinitions><ColumnDefinition Width="1.7*"/><ColumnDefinition Width="14"/><ColumnDefinition Width="0.9*"/></Grid.ColumnDefinitions>
+
+   <Border Style="{StaticResource CardBorderStyle}" Padding="0">
+    <TabControl>
+     <TabItem Header="Reconciliation">
+      <Grid>
+       <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+       <Grid Margin="16">
+        <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="16"/><ColumnDefinition/></Grid.ColumnDefinitions>
+        <StackPanel>
+         <TextBlock Text="Financial summary" Style="{StaticResource SectionTitleStyle}"/>
+         <Grid Margin="0,10,0,0">
+          <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+          <StackPanel>
+           <TextBlock Text="Purchases" Style="{StaticResource MutedTextStyle}"/>
+           <TextBlock Text="Operating expenses" Style="{StaticResource MutedTextStyle}" Margin="0,8,0,0"/>
+           <TextBlock Text="Shift count" Style="{StaticResource MutedTextStyle}" Margin="0,8,0,0"/>
+          </StackPanel>
+          <StackPanel Grid.Column="1">
+           <TextBlock Text="{Binding Purchases, StringFormat=AFN {0:N2}}" FontWeight="SemiBold"/>
+           <TextBlock Text="{Binding OperatingExpenses, StringFormat=AFN {0:N2}}" FontWeight="SemiBold" Margin="0,8,0,0"/>
+           <TextBlock Text="{Binding ShiftCount}" FontWeight="SemiBold" Margin="0,8,0,0"/>
+          </StackPanel>
+         </Grid>
+        </StackPanel>
+        <StackPanel Grid.Column="2">
+         <TextBlock Text="Cash integrity" Style="{StaticResource SectionTitleStyle}"/>
+         <Grid Margin="0,10,0,0">
+          <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+          <StackPanel>
+           <TextBlock Text="Ledger expected" Style="{StaticResource MutedTextStyle}"/>
+           <TextBlock Text="Shift expected" Style="{StaticResource MutedTextStyle}" Margin="0,8,0,0"/>
+           <TextBlock Text="Ledger matches" Style="{StaticResource MutedTextStyle}" Margin="0,8,0,0"/>
+          </StackPanel>
+          <StackPanel Grid.Column="1">
+           <TextBlock Text="{Binding LedgerExpectedCash, StringFormat=AFN {0:N2}}" FontWeight="SemiBold"/>
+           <TextBlock Text="{Binding ExpectedCash, StringFormat=AFN {0:N2}}" FontWeight="SemiBold" Margin="0,8,0,0"/>
+           <TextBlock Text="{Binding CashLedgerMatches}" FontWeight="SemiBold" Margin="0,8,0,0"/>
+          </StackPanel>
+         </Grid>
+        </StackPanel>
+       </Grid>
+
+       <DataGrid Grid.Row="1" ItemsSource="{Binding Shifts}" AutoGenerateColumns="False" IsReadOnly="True">
+        <DataGrid.Columns>
+         <DataGridTextColumn Header="Terminal" Binding="{Binding Terminal}" Width="*"/>
+         <DataGridTextColumn Header="Cashier" Binding="{Binding Cashier}" Width="140"/>
+         <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="80"/>
+         <DataGridTextColumn Header="Opening" Binding="{Binding OpeningCash, StringFormat=N2}" Width="90"/>
+         <DataGridTextColumn Header="Expected" Binding="{Binding ExpectedCash, StringFormat=N2}" Width="90"/>
+         <DataGridTextColumn Header="Actual" Binding="{Binding ActualCash, StringFormat=N2}" Width="90"/>
+         <DataGridTextColumn Header="Variance" Binding="{Binding Variance, StringFormat=N2}" Width="90"/>
+         <DataGridCheckBoxColumn Header="Within" Binding="{Binding WithinTolerance}" Width="65"/>
+         <DataGridTextColumn Header="Opened" Binding="{Binding OpenedAt, StringFormat=g}" Width="140"/>
+         <DataGridTextColumn Header="Closed" Binding="{Binding ClosedAt, StringFormat=g}" Width="140"/>
+        </DataGrid.Columns>
+       </DataGrid>
+      </Grid>
+     </TabItem>
+
+     <TabItem Header="Cash Breakdown">
+      <DataGrid ItemsSource="{Binding CashBreakdown}" AutoGenerateColumns="False" IsReadOnly="True">
+       <DataGrid.Columns>
+        <DataGridTextColumn Header="Movement type" Binding="{Binding MovementType}" Width="*"/>
+        <DataGridTextColumn Header="Direction" Binding="{Binding Direction}" Width="110"/>
+        <DataGridTextColumn Header="Amount (AFN)" Binding="{Binding Amount, StringFormat=N2}" Width="140"/>
+       </DataGrid.Columns>
+      </DataGrid>
+     </TabItem>
+
+     <TabItem Header="Closure Revisions">
+      <DataGrid ItemsSource="{Binding Closures}" AutoGenerateColumns="False" IsReadOnly="True">
+       <DataGrid.Columns>
+        <DataGridTextColumn Header="Number" Binding="{Binding Number}" Width="160"/>
+        <DataGridTextColumn Header="Revision" Binding="{Binding Version}" Width="75"/>
+        <DataGridTextColumn Header="Sales" Binding="{Binding NetSalesTotal, StringFormat=N2}" Width="95"/>
+        <DataGridTextColumn Header="Gross Profit" Binding="{Binding GrossProfitTotal, StringFormat=N2}" Width="100"/>
+        <DataGridTextColumn Header="Net Profit" Binding="{Binding NetProfitTotal, StringFormat=N2}" Width="100"/>
+        <DataGridTextColumn Header="Expected" Binding="{Binding ExpectedCashTotal, StringFormat=N2}" Width="95"/>
+        <DataGridTextColumn Header="Actual" Binding="{Binding ActualCashTotal, StringFormat=N2}" Width="95"/>
+        <DataGridTextColumn Header="Variance" Binding="{Binding VarianceTotal, StringFormat=N2}" Width="90"/>
+        <DataGridTextColumn Header="Closed" Binding="{Binding ClosedAt, StringFormat=g}" Width="145"/>
+        <DataGridTextColumn Header="Notes" Binding="{Binding Notes}" Width="*"/>
+       </DataGrid.Columns>
+      </DataGrid>
+     </TabItem>
+
+     <TabItem Header="Business Days">
+      <DataGrid ItemsSource="{Binding BusinessDays}" AutoGenerateColumns="False" IsReadOnly="True">
+       <DataGrid.Columns>
+        <DataGridTextColumn Header="Date" Binding="{Binding BusinessDate, StringFormat=d}" Width="130"/>
+        <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="90"/>
+        <DataGridTextColumn Header="Revisions" Binding="{Binding ClosureVersions}" Width="80"/>
+        <DataGridTextColumn Header="Closed" Binding="{Binding ClosedAt, StringFormat=g}" Width="150"/>
+        <DataGridTextColumn Header="Reopened" Binding="{Binding ReopenedAt, StringFormat=g}" Width="150"/>
+        <DataGridTextColumn Header="Reopen reason" Binding="{Binding ReopenReason}" Width="*"/>
+       </DataGrid.Columns>
+      </DataGrid>
+     </TabItem>
+    </TabControl>
+   </Border>
+
+   <ScrollViewer Grid.Column="2" VerticalScrollBarVisibility="Auto">
+    <StackPanel>
+     <Border Style="{StaticResource CardBorderStyle}">
+      <StackPanel>
+       <TextBlock Text="Close business day" Style="{StaticResource SectionTitleStyle}"/>
+       <TextBlock Text="All cashier shifts must be closed and cash must reconcile before the immutable daily snapshot can be created."
+                  Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" Margin="0,4,0,10"/>
+       <TextBox Text="{Binding ClosingNotes}" ToolTip="Closing notes" AcceptsReturn="True" Height="76"/>
+       <Button Content="Close &amp; Snapshot Day" Command="{Binding CloseDayCommand}"
+               Style="{StaticResource PrimaryButtonStyle}" IsEnabled="{Binding CanCloseCurrentDay}" Margin="0,10,0,0"/>
+      </StackPanel>
+     </Border>
+
+     <Border Style="{StaticResource CardBorderStyle}" Margin="0,14,0,0">
+      <StackPanel>
+       <TextBlock Text="Reopen business day" Style="{StaticResource SectionTitleStyle}"/>
+       <TextBlock Text="Reopening never edits an earlier closure snapshot. The next close creates a new revision."
+                  Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" Margin="0,4,0,10"/>
+       <TextBox Text="{Binding ReopenReason}" ToolTip="Reason for reopening" AcceptsReturn="True" Height="70"/>
+       <Button Content="Reopen Day" Command="{Binding ReopenDayCommand}"
+               Style="{StaticResource SecondaryButtonStyle}" IsEnabled="{Binding CanReopenCurrentDay}" Margin="0,10,0,0"/>
+      </StackPanel>
+     </Border>
+
+     <Border Style="{StaticResource CardBorderStyle}" Margin="0,14,0,0">
+      <StackPanel>
+       <TextBlock Text="Close gate" Style="{StaticResource SectionTitleStyle}"/>
+       <TextBlock Text="{Binding OpenShiftCount, StringFormat=Open shifts: {0}}" Style="{StaticResource MutedTextStyle}" Margin="0,8,0,0"/>
+       <TextBlock Text="{Binding LedgerExpectedCash, StringFormat=Ledger expected: AFN {0:N2}}" Style="{StaticResource MutedTextStyle}" Margin="0,5,0,0"/>
+       <TextBlock Text="{Binding ExpectedCash, StringFormat=Shift expected: AFN {0:N2}}" Style="{StaticResource MutedTextStyle}" Margin="0,5,0,0"/>
+       <TextBlock Text="{Binding CashLedgerMatches, StringFormat=Reconciled: {0}}" Style="{StaticResource MutedTextStyle}" Margin="0,5,0,0"/>
+      </StackPanel>
+     </Border>
+    </StackPanel>
+   </ScrollViewer>
+  </Grid>
+ </Grid>
+</UserControl>
