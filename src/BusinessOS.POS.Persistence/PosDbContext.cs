@@ -13,6 +13,10 @@ public sealed class PosDbContext(DbContextOptions<PosDbContext> options) : DbCon
     public DbSet<BrandEntity> Brands => Set<BrandEntity>();
     public DbSet<UnitEntity> Units => Set<UnitEntity>();
     public DbSet<PaymentMethodEntity> PaymentMethods => Set<PaymentMethodEntity>();
+    public DbSet<CustomerEntity> Customers => Set<CustomerEntity>();
+    public DbSet<CustomerLedgerEntryEntity> CustomerLedgerEntries => Set<CustomerLedgerEntryEntity>();
+    public DbSet<CustomerCollectionEntity> CustomerCollections => Set<CustomerCollectionEntity>();
+    public DbSet<CustomerCollectionAllocationEntity> CustomerCollectionAllocations => Set<CustomerCollectionAllocationEntity>();
     public DbSet<ProductEntity> Products => Set<ProductEntity>();
     public DbSet<ProductUnitEntity> ProductUnits => Set<ProductUnitEntity>();
     public DbSet<ProductBarcodeEntity> ProductBarcodes => Set<ProductBarcodeEntity>();
@@ -30,6 +34,9 @@ public sealed class PosDbContext(DbContextOptions<PosDbContext> options) : DbCon
     public DbSet<SalePaymentEntity> SalePayments => Set<SalePaymentEntity>();
     public DbSet<HeldSaleEntity> HeldSales => Set<HeldSaleEntity>();
     public DbSet<HeldSaleItemEntity> HeldSaleItems => Set<HeldSaleItemEntity>();
+    public DbSet<SaleReturnEntity> SaleReturns => Set<SaleReturnEntity>();
+    public DbSet<SaleReturnItemEntity> SaleReturnItems => Set<SaleReturnItemEntity>();
+    public DbSet<SaleRefundEntity> SaleRefunds => Set<SaleRefundEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -92,6 +99,45 @@ public sealed class PosDbContext(DbContextOptions<PosDbContext> options) : DbCon
         paymentMethod.HasKey(x => x.Id);
         paymentMethod.Property(x => x.Code).HasMaxLength(40).IsRequired();
         paymentMethod.HasIndex(x => x.Code).IsUnique();
+
+        var customer = modelBuilder.Entity<CustomerEntity>();
+        customer.ToTable("customers");
+        customer.HasKey(x => x.Id);
+        customer.Property(x => x.Name).HasMaxLength(180).IsRequired();
+        customer.Property(x => x.Phone).HasMaxLength(50);
+        customer.Property(x => x.AlternatePhone).HasMaxLength(50);
+        customer.Property(x => x.CreditLimit).HasPrecision(18, 2);
+        customer.Property(x => x.OpeningBalance).HasPrecision(18, 2);
+        customer.Property(x => x.CurrentBalance).HasPrecision(18, 2);
+        customer.HasIndex(x => x.Name);
+
+        var ledger = modelBuilder.Entity<CustomerLedgerEntryEntity>();
+        ledger.ToTable("customer_ledger_entries");
+        ledger.HasKey(x => x.Id);
+        ledger.Property(x => x.EntryType).HasMaxLength(40).IsRequired();
+        ledger.Property(x => x.Debit).HasPrecision(18, 2);
+        ledger.Property(x => x.Credit).HasPrecision(18, 2);
+        ledger.Property(x => x.BalanceAfter).HasPrecision(18, 2);
+        ledger.HasIndex(x => new { x.CustomerId, x.EntryType, x.ReferenceType, x.ReferenceId }).IsUnique();
+        ledger.HasIndex(x => new { x.CustomerId, x.Id });
+
+        var collection = modelBuilder.Entity<CustomerCollectionEntity>();
+        collection.ToTable("customer_collections");
+        collection.HasKey(x => x.Id);
+        collection.Property(x => x.Number).HasMaxLength(40).IsRequired();
+        collection.HasIndex(x => x.Number).IsUnique();
+        collection.Property(x => x.IdempotencyKey).HasMaxLength(64).IsRequired();
+        collection.HasIndex(x => x.IdempotencyKey).IsUnique();
+        collection.Property(x => x.Amount).HasPrecision(18, 2);
+        collection.Property(x => x.TenderedAmount).HasPrecision(18, 2);
+        collection.Property(x => x.ChangeAmount).HasPrecision(18, 2);
+        collection.HasMany(x => x.Allocations).WithOne().HasForeignKey(x => x.CustomerCollectionId).OnDelete(DeleteBehavior.Cascade);
+
+        var collectionAllocation = modelBuilder.Entity<CustomerCollectionAllocationEntity>();
+        collectionAllocation.ToTable("customer_collection_allocations");
+        collectionAllocation.HasKey(x => x.Id);
+        collectionAllocation.Property(x => x.Amount).HasPrecision(18, 2);
+        collectionAllocation.HasIndex(x => new { x.CustomerCollectionId, x.SaleId }).IsUnique();
 
         var product = modelBuilder.Entity<ProductEntity>();
         product.ToTable("products");
@@ -160,6 +206,7 @@ public sealed class PosDbContext(DbContextOptions<PosDbContext> options) : DbCon
         move.Property(x => x.IdempotencyKey).HasMaxLength(64);
         move.HasIndex(x => x.IdempotencyKey).IsUnique();
         move.HasIndex(x => new { x.ProductId, x.Id });
+        move.HasIndex(x => x.SaleItemId);
 
         var stockCount = modelBuilder.Entity<StockCountEntity>();
         stockCount.ToTable("stock_counts");
@@ -223,6 +270,10 @@ public sealed class PosDbContext(DbContextOptions<PosDbContext> options) : DbCon
         sale.Property(x => x.GrossProfit).HasPrecision(18, 2);
         sale.Property(x => x.PaidAmount).HasPrecision(18, 2);
         sale.Property(x => x.ChangeAmount).HasPrecision(18, 2);
+        sale.Property(x => x.BalanceDue).HasPrecision(18, 2);
+        sale.Property(x => x.ReturnedTotal).HasPrecision(18, 2);
+        sale.Property(x => x.ReceivableReversedTotal).HasPrecision(18, 2);
+        sale.Property(x => x.RefundedTotal).HasPrecision(18, 2);
         sale.HasMany(x => x.Items).WithOne().HasForeignKey(x => x.SaleId).OnDelete(DeleteBehavior.Cascade);
         sale.HasMany(x => x.Payments).WithOne().HasForeignKey(x => x.SaleId).OnDelete(DeleteBehavior.Cascade);
 
@@ -247,6 +298,8 @@ public sealed class PosDbContext(DbContextOptions<PosDbContext> options) : DbCon
         salePayment.Property(x => x.Amount).HasPrecision(18, 2);
         salePayment.Property(x => x.TenderedAmount).HasPrecision(18, 2);
         salePayment.Property(x => x.ChangeAmount).HasPrecision(18, 2);
+        salePayment.Property(x => x.IdempotencyKey).HasMaxLength(100);
+        salePayment.HasIndex(x => x.IdempotencyKey).IsUnique();
 
         var held = modelBuilder.Entity<HeldSaleEntity>();
         held.ToTable("held_sales");
@@ -256,6 +309,7 @@ public sealed class PosDbContext(DbContextOptions<PosDbContext> options) : DbCon
         held.Property(x => x.IdempotencyKey).HasMaxLength(64).IsRequired();
         held.HasIndex(x => x.IdempotencyKey).IsUnique();
         held.Property(x => x.SaleDiscountAmount).HasPrecision(18, 2);
+        held.Property(x => x.CustomerNameSnapshot).HasMaxLength(180);
         held.HasMany(x => x.Items).WithOne().HasForeignKey(x => x.HeldSaleId).OnDelete(DeleteBehavior.Cascade);
 
         var heldItem = modelBuilder.Entity<HeldSaleItemEntity>();
@@ -264,6 +318,35 @@ public sealed class PosDbContext(DbContextOptions<PosDbContext> options) : DbCon
         heldItem.Property(x => x.Quantity).HasPrecision(20, 6);
         heldItem.Property(x => x.LineDiscountAmount).HasPrecision(18, 2);
         heldItem.Property(x => x.UnitPriceSnapshot).HasPrecision(18, 2);
+
+        var saleReturn = modelBuilder.Entity<SaleReturnEntity>();
+        saleReturn.ToTable("sale_returns");
+        saleReturn.HasKey(x => x.Id);
+        saleReturn.Property(x => x.Number).HasMaxLength(40).IsRequired();
+        saleReturn.HasIndex(x => x.Number).IsUnique();
+        saleReturn.Property(x => x.IdempotencyKey).HasMaxLength(64).IsRequired();
+        saleReturn.HasIndex(x => x.IdempotencyKey).IsUnique();
+        saleReturn.Property(x => x.ReturnTotal).HasPrecision(18, 2);
+        saleReturn.Property(x => x.CogsReversed).HasPrecision(18, 2);
+        saleReturn.Property(x => x.ReceivableReversed).HasPrecision(18, 2);
+        saleReturn.Property(x => x.RefundTotal).HasPrecision(18, 2);
+        saleReturn.HasMany(x => x.Items).WithOne().HasForeignKey(x => x.SaleReturnId).OnDelete(DeleteBehavior.Cascade);
+        saleReturn.HasMany(x => x.Refunds).WithOne().HasForeignKey(x => x.SaleReturnId).OnDelete(DeleteBehavior.Cascade);
+
+        var saleReturnItem = modelBuilder.Entity<SaleReturnItemEntity>();
+        saleReturnItem.ToTable("sale_return_items");
+        saleReturnItem.HasKey(x => x.Id);
+        saleReturnItem.Property(x => x.Quantity).HasPrecision(20, 6);
+        saleReturnItem.Property(x => x.QuantityBase).HasPrecision(20, 6);
+        saleReturnItem.Property(x => x.ReturnAmount).HasPrecision(18, 2);
+        saleReturnItem.Property(x => x.CogsAmount).HasPrecision(18, 2);
+
+        var saleRefund = modelBuilder.Entity<SaleRefundEntity>();
+        saleRefund.ToTable("sale_refunds");
+        saleRefund.HasKey(x => x.Id);
+        saleRefund.Property(x => x.IdempotencyKey).HasMaxLength(100).IsRequired();
+        saleRefund.HasIndex(x => x.IdempotencyKey).IsUnique();
+        saleRefund.Property(x => x.Amount).HasPrecision(18, 2);
 
         base.OnModelCreating(modelBuilder);
     }
