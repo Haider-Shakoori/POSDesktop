@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using BusinessOS.POS.Application.Abstractions.Authentication;
+using BusinessOS.POS.Application.Abstractions.Customers;
 using BusinessOS.POS.Application.Abstractions.Sales;
 using BusinessOS.POS.Desktop.Sales;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -11,6 +12,7 @@ public sealed partial class PosViewModel : ObservableObject
 {
     private readonly IPosService _pos;
     private readonly ISalesService _sales;
+    private readonly ICustomerService _customers;
     private readonly IReceiptPrintService _printer;
     private readonly IPermissionAuthorizer _authorizer;
     private bool _loaded;
@@ -19,11 +21,13 @@ public sealed partial class PosViewModel : ObservableObject
     public PosViewModel(
         IPosService pos,
         ISalesService sales,
+        ICustomerService customers,
         IReceiptPrintService printer,
         IPermissionAuthorizer authorizer)
     {
         _pos = pos;
         _sales = sales;
+        _customers = customers;
         _printer = printer;
         _authorizer = authorizer;
 
@@ -39,6 +43,8 @@ public sealed partial class PosViewModel : ObservableObject
         AddPaymentCommand = new RelayCommand(AddPayment, CanAddPayment);
         RemovePaymentCommand = new RelayCommand<PosPaymentEditorRow>(RemovePayment);
         PrintLastReceiptCommand = new AsyncRelayCommand(PrintLastReceiptAsync, CanPrintLastReceipt);
+        QuickCreateCustomerCommand = new AsyncRelayCommand(QuickCreateCustomerAsync, CanQuickCreate);
+        RefreshCustomersCommand = new AsyncRelayCommand(RefreshCustomersAsync);
     }
 
     public ObservableCollection<PosProductSearchItem> SearchResults { get; } = [];
@@ -46,6 +52,7 @@ public sealed partial class PosViewModel : ObservableObject
     public ObservableCollection<PosPaymentMethod> PaymentMethods { get; } = [];
     public ObservableCollection<PosPaymentEditorRow> Payments { get; } = [];
     public ObservableCollection<PosHeldSaleSummary> HeldSales { get; } = [];
+    public ObservableCollection<PosCustomerOption> Customers { get; } = [];
 
     public IAsyncRelayCommand SearchCommand { get; }
     public IRelayCommand AddSelectedCommand { get; }
@@ -59,15 +66,25 @@ public sealed partial class PosViewModel : ObservableObject
     public IRelayCommand AddPaymentCommand { get; }
     public IRelayCommand<PosPaymentEditorRow> RemovePaymentCommand { get; }
     public IAsyncRelayCommand PrintLastReceiptCommand { get; }
+    public IAsyncRelayCommand QuickCreateCustomerCommand { get; }
+    public IAsyncRelayCommand RefreshCustomersCommand { get; }
 
     public bool CanDiscount => _authorizer.HasPermission("sales.discount");
     public bool CanHoldSales => _authorizer.HasPermission("sales.hold");
     public bool CanOpenShift => _authorizer.HasPermission("shifts.open");
+    public bool CanCredit => _authorizer.HasPermission("sales.credit");
+    public bool CanQuickCreateCustomer =>
+        _authorizer.HasPermission("customers.quick_create") ||
+        _authorizer.HasPermission("customers.manage");
 
     [ObservableProperty] private string searchText = string.Empty;
     [ObservableProperty] private PosProductSearchItem? selectedProduct;
     [ObservableProperty] private PosPaymentMethod? selectedPaymentMethodToAdd;
     [ObservableProperty] private PosHeldSaleSummary? selectedHeldSale;
+    [ObservableProperty] private PosCustomerOption? selectedCustomer;
+    [ObservableProperty] private string quickCustomerName = string.Empty;
+    [ObservableProperty] private string? quickCustomerPhone;
+    [ObservableProperty] private decimal quickCustomerCreditLimit;
     [ObservableProperty] private decimal saleDiscountAmount;
     [ObservableProperty] private string? saleNotes;
     [ObservableProperty] private decimal openingCash;
@@ -86,10 +103,12 @@ public sealed partial class PosViewModel : ObservableObject
     public decimal RemainingPaymentAmount => Money(Math.Max(0m, GrandTotal - AppliedPaymentTotal));
     public string TotalText => "AFN " + GrandTotal.ToString("N2");
     public string PaymentSummaryText =>
-        RemainingPaymentAmount > 0m
-            ? "Remaining: AFN " + RemainingPaymentAmount.ToString("N2")
-            : AppliedPaymentTotal > GrandTotal
-                ? "Applied payments exceed total"
+        AppliedPaymentTotal > GrandTotal
+            ? "Applied payments exceed total"
+            : RemainingPaymentAmount > 0m
+                ? SelectedCustomer is not null && CanCredit
+                    ? "Customer credit: AFN " + RemainingPaymentAmount.ToString("N2")
+                    : "Remaining: AFN " + RemainingPaymentAmount.ToString("N2") + " · select customer for credit"
                 : "Paid in full";
 
     partial void OnSaleDiscountAmountChanged(decimal value) => RaiseTotals();
@@ -100,6 +119,8 @@ public sealed partial class PosViewModel : ObservableObject
     }
     partial void OnLastSaleIdChanged(long? value) => PrintLastReceiptCommand.NotifyCanExecuteChanged();
     partial void OnSelectedPaymentMethodToAddChanged(PosPaymentMethod? value) => AddPaymentCommand.NotifyCanExecuteChanged();
+    partial void OnSelectedCustomerChanged(PosCustomerOption? value) => RaisePaymentTotals();
+    partial void OnQuickCustomerNameChanged(string value) => QuickCreateCustomerCommand.NotifyCanExecuteChanged();
 
     public async Task InitializeAsync()
     {
@@ -111,6 +132,10 @@ public sealed partial class PosViewModel : ObservableObject
             PaymentMethods.Clear();
             foreach (var method in reference.PaymentMethods)
                 PaymentMethods.Add(method);
+
+            Customers.Clear();
+            foreach (var customer in reference.Customers)
+                Customers.Add(customer);
 
             SelectedPaymentMethodToAdd =
                 PaymentMethods.FirstOrDefault(x => x.IsCash) ??
@@ -184,6 +209,7 @@ public sealed partial class PosViewModel : ObservableObject
         Cart.Clear();
         SaleDiscountAmount = 0m;
         SaleNotes = null;
+        SelectedCustomer = null;
         ResetPayments();
         RaiseTotals();
         if (showMessage) StatusMessage = "Cart cleared.";
@@ -208,14 +234,18 @@ public sealed partial class PosViewModel : ObservableObject
                     x.TenderedAmount,
                     x.Reference,
                     x.Notes)).ToList(),
-                SaleNotes));
+                SaleNotes,
+                SelectedCustomer?.Id));
 
             LastSaleId = result.SaleId;
             LastSaleNumber = result.SaleNumber;
             ResetCart(false);
             StatusMessage = "Sale " + result.SaleNumber +
-                            " completed. Change: AFN " + result.ChangeAmount.ToString("N2") +
+                            " completed · " + result.PaymentStatus +
+                            (result.BalanceDue > 0m ? " · balance AFN " + result.BalanceDue.ToString("N2") : string.Empty) +
+                            " · change AFN " + result.ChangeAmount.ToString("N2") +
                             ". Receipt is ready to print.";
+            await RefreshCustomersCoreAsync();
             await SearchCoreAsync();
         });
     }
@@ -233,7 +263,8 @@ public sealed partial class PosViewModel : ObservableObject
                     x.Quantity,
                     x.DiscountAmount)).ToList(),
                 SaleDiscountAmount,
-                SaleNotes));
+                SaleNotes,
+                SelectedCustomer?.Id));
 
             ResetCart(false);
             StatusMessage = "Sale held as " + held.Number + ".";
@@ -277,6 +308,9 @@ public sealed partial class PosViewModel : ObservableObject
 
             SaleDiscountAmount = detail.SaleDiscountAmount;
             SaleNotes = detail.Notes;
+            SelectedCustomer = detail.CustomerId is null
+                ? null
+                : Customers.FirstOrDefault(x => x.Id == detail.CustomerId.Value);
             StatusMessage = detail.Number + " resumed.";
             await RefreshHeldAsync();
             RaiseTotals();
@@ -342,7 +376,6 @@ public sealed partial class PosViewModel : ObservableObject
         if (row is null) return;
         row.PaymentChanged -= OnPaymentChanged;
         Payments.Remove(row);
-        if (Payments.Count == 0) EnsureDefaultPayment();
         RaisePaymentTotals();
     }
 
@@ -377,6 +410,51 @@ public sealed partial class PosViewModel : ObservableObject
         row.PaymentChanged += OnPaymentChanged;
 
     private void OnPaymentChanged(object? sender, EventArgs e) => RaisePaymentTotals();
+
+    private async Task RefreshCustomersAsync() =>
+        await ExecuteBusyAsync(RefreshCustomersCoreAsync);
+
+    private async Task RefreshCustomersCoreAsync()
+    {
+        var selectedId = SelectedCustomer?.Id;
+        var rows = await _customers.GetCustomersAsync(activeOnly: true);
+        Customers.Clear();
+        foreach (var customer in rows)
+        {
+            Customers.Add(new PosCustomerOption(
+                customer.Id, customer.Name, customer.Phone,
+                customer.CreditLimit, customer.CurrentBalance));
+        }
+
+        SelectedCustomer = selectedId is null
+            ? null
+            : Customers.FirstOrDefault(x => x.Id == selectedId.Value);
+    }
+
+    private async Task QuickCreateCustomerAsync()
+    {
+        if (!CanQuickCreate()) return;
+
+        await ExecuteBusyAsync(async () =>
+        {
+            var saved = await _customers.SaveCustomerAsync(new CustomerSaveRequest(
+                null,
+                QuickCustomerName,
+                QuickCustomerPhone,
+                null,
+                null,
+                QuickCustomerCreditLimit,
+                0m,
+                true));
+
+            await RefreshCustomersCoreAsync();
+            SelectedCustomer = Customers.FirstOrDefault(x => x.Id == saved.Id);
+            QuickCustomerName = string.Empty;
+            QuickCustomerPhone = null;
+            QuickCustomerCreditLimit = 0m;
+            StatusMessage = "Customer " + saved.Name + " created and selected.";
+        });
+    }
 
     private async Task RefreshHeldAsync()
     {
@@ -440,10 +518,13 @@ public sealed partial class PosViewModel : ObservableObject
 
     private bool CanCheckout()
     {
-        if (IsBusy || Cart.Count == 0 || GrandTotal < 0m || Payments.Count is < 1 or > 8)
+        if (IsBusy || Cart.Count == 0 || GrandTotal < 0m || Payments.Count > 8)
             return false;
 
-        if (AppliedPaymentTotal != GrandTotal)
+        if (AppliedPaymentTotal > GrandTotal)
+            return false;
+
+        if (RemainingPaymentAmount > 0m && (SelectedCustomer is null || !CanCredit))
             return false;
 
         foreach (var payment in Payments)
@@ -462,6 +543,7 @@ public sealed partial class PosViewModel : ObservableObject
     private bool CanReleaseHeld() => !IsBusy && SelectedHeldSale is not null;
     private bool CanAddPayment() => !IsBusy && Payments.Count < 8 && SelectedPaymentMethodToAdd is not null;
     private bool CanPrintLastReceipt() => !IsBusy && LastSaleId is not null;
+    private bool CanQuickCreate() => !IsBusy && CanQuickCreateCustomer && !string.IsNullOrWhiteSpace(QuickCustomerName);
 
     private async Task ExecuteBusyAsync(Func<Task> action)
     {
@@ -492,6 +574,7 @@ public sealed partial class PosViewModel : ObservableObject
         ReleaseHeldCommand.NotifyCanExecuteChanged();
         AddPaymentCommand.NotifyCanExecuteChanged();
         PrintLastReceiptCommand.NotifyCanExecuteChanged();
+        QuickCreateCustomerCommand.NotifyCanExecuteChanged();
     }
 
     private static decimal Money(decimal value) =>
