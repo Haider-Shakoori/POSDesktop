@@ -14,7 +14,15 @@ public interface IPosService
 
 public sealed record PosReferenceData(
     IReadOnlyList<PosPaymentMethod> PaymentMethods,
+    IReadOnlyList<PosCustomerOption> Customers,
     PosShiftState Shift);
+
+public sealed record PosCustomerOption(
+    long Id,
+    string Name,
+    string? Phone,
+    decimal CreditLimit,
+    decimal CurrentBalance);
 
 public sealed record PosPaymentMethod(long Id, string Code, string Name, bool IsCash);
 
@@ -47,7 +55,8 @@ public sealed record PosCheckoutRequest(
     IReadOnlyList<PosCheckoutLineRequest> Lines,
     decimal SaleDiscountAmount,
     IReadOnlyList<PosPaymentRequest> Payments,
-    string? Notes = null);
+    string? Notes = null,
+    long? CustomerId = null);
 
 public sealed record PosCheckoutResult(
     long SaleId,
@@ -57,20 +66,26 @@ public sealed record PosCheckoutResult(
     decimal ChangeAmount,
     decimal CogsTotal,
     decimal GrossProfit,
-    DateTimeOffset SoldAt);
+    DateTimeOffset SoldAt,
+    decimal BalanceDue,
+    string PaymentStatus,
+    string CustomerName);
 
 public sealed record PosHoldRequest(
     string IdempotencyKey,
     IReadOnlyList<PosCheckoutLineRequest> Lines,
     decimal SaleDiscountAmount,
-    string? Notes = null);
+    string? Notes = null,
+    long? CustomerId = null);
 
 public sealed record PosHeldSaleSummary(
     long Id,
     string Number,
     int ItemCount,
     decimal EstimatedTotal,
-    DateTimeOffset HeldAt);
+    DateTimeOffset HeldAt,
+    long? CustomerId,
+    string CustomerName);
 
 public sealed record PosHeldSaleLine(
     long ProductUnitId,
@@ -91,4 +106,6 @@ public sealed record PosHeldSaleDetail(
     string Number,
     decimal SaleDiscountAmount,
     string? Notes,
+    long? CustomerId,
+    string CustomerName,
     IReadOnlyList<PosHeldSaleLine> Lines);

@@ -22,6 +22,7 @@ public sealed record SaleHistoryRow(
     DateTimeOffset SoldAt);
 
 public sealed record SaleDetailLine(
+    long SaleItemId,
     string Sku,
     string Product,
     string Unit,
@@ -32,7 +33,9 @@ public sealed record SaleDetailLine(
     decimal SaleDiscount,
     decimal NetTotal,
     decimal Cogs,
-    decimal GrossProfit);
+    decimal GrossProfit,
+    decimal ReturnedQuantity,
+    decimal ReturnableQuantity);
 
 public sealed record SaleDetailPayment(
     string MethodCode,
@@ -51,6 +54,7 @@ public sealed record SaleDetail(
     string CashierName,
     string Status,
     string PaymentStatus,
+    long? CustomerId,
     decimal Subtotal,
     decimal LineDiscountTotal,
     decimal SaleDiscountAmount,
@@ -59,6 +63,9 @@ public sealed record SaleDetail(
     decimal GrossProfit,
     decimal PaidAmount,
     decimal ChangeAmount,
+    decimal BalanceDue,
+    decimal ReturnedTotal,
+    decimal RefundedTotal,
     DateTimeOffset SoldAt,
     string? Notes,
     IReadOnlyList<SaleDetailLine> Items,

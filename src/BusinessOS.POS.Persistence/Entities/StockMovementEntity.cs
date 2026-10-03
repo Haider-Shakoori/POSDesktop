@@ -5,6 +5,7 @@ public sealed class StockMovementEntity
     public long Id { get; set; }
     public long ProductId { get; set; }
     public long? ProductBatchId { get; set; }
+    public long? SaleItemId { get; set; }
     public long? SourceUnitId { get; set; }
     public long? ActorUserId { get; set; }
     public string MovementType { get; set; } = string.Empty;
