@@ -144,11 +144,24 @@ public sealed class LocalSaleReturnService(
                     Money(x.Sum(i => i.ReturnAmount)),
                     Money(x.Sum(i => i.CogsAmount))));
 
+        var productUnitIds = sale.Items.Select(x => x.ProductUnitId).Distinct().ToList();
+        var unitPrecision = await context.ProductUnits.AsNoTracking()
+            .Include(x => x.Unit)
+            .Where(x => productUnitIds.Contains(x.Id))
+            .ToDictionaryAsync(x => x.Id, x => x.Unit.DecimalPlaces, cancellationToken);
+
         List<PreparedReturn> prepared;
         if (type == "void")
         {
             prepared = sale.Items
-                .Select(item => PrepareLine(item, item.Quantity - priorByItem.GetValueOrDefault(item.Id)?.QuantityReturned ?? item.Quantity, priorByItem))
+                .Select(item =>
+                {
+                    var alreadyReturned = priorByItem.GetValueOrDefault(item.Id)?.QuantityReturned ?? 0m;
+                    var remaining = Quantity(item.Quantity - alreadyReturned);
+                    return remaining <= 0m
+                        ? null
+                        : PrepareLine(item, remaining, unitPrecision[item.ProductUnitId], priorByItem);
+                })
                 .Where(x => x is not null)
                 .Cast<PreparedReturn>()
                 .ToList();
@@ -165,7 +178,7 @@ public sealed class LocalSaleReturnService(
             {
                 var item = sale.Items.SingleOrDefault(x => x.Id == input.SaleItemId)
                     ?? throw new InvalidOperationException("The selected item does not belong to this sale.");
-                var line = PrepareLine(item, input.Quantity, priorByItem)
+                var line = PrepareLine(item, input.Quantity, unitPrecision[item.ProductUnitId], priorByItem)
                     ?? throw new InvalidOperationException("No returnable sale quantity remains.");
                 prepared.Add(line);
             }
@@ -279,6 +292,7 @@ public sealed class LocalSaleReturnService(
     private PreparedReturn? PrepareLine(
         SaleItemEntity item,
         decimal requestedQuantity,
+        int decimalPlaces,
         IReadOnlyDictionary<long, PriorReturn> priorByItem)
     {
         if (requestedQuantity <= 0m)
@@ -290,7 +304,7 @@ public sealed class LocalSaleReturnService(
         if (requestedQuantity > remainingQuantity)
             throw new InvalidOperationException("Return quantity exceeds the remaining returnable quantity.");
 
-        EnsurePrecision(requestedQuantity, item.Quantity);
+        EnsurePrecision(requestedQuantity, decimalPlaces);
         var remainingAmount = Money(item.LineNetTotal - prior.AmountReturned);
         var remainingCogs = Money(item.CogsAmount - prior.CogsReturned);
         var quantity = Quantity(requestedQuantity);
@@ -379,8 +393,10 @@ public sealed class LocalSaleReturnService(
                 (x.MovementType == "sale_return" || x.MovementType == "sale_void"))
             .ToListAsync(cancellationToken);
 
+        static long BatchKey(long? batchId) => batchId ?? 0L;
+
         var restoredByBatch = restoredMovements
-            .GroupBy(x => x.ProductBatchId)
+            .GroupBy(x => BatchKey(x.ProductBatchId))
             .ToDictionary(x => x.Key, x => Quantity(x.Sum(m => m.QuantityBase)));
 
         var unitCostBase = quantityBase == 0m ? 0m : decimal.Round(cogsAmount / quantityBase, 4, MidpointRounding.AwayFromZero);
@@ -390,7 +406,7 @@ public sealed class LocalSaleReturnService(
         {
             if (remaining <= 0m) break;
             var originallySold = Quantity(-original.QuantityBase);
-            var alreadyRestored = restoredByBatch.GetValueOrDefault(original.ProductBatchId, 0m);
+            var alreadyRestored = restoredByBatch.GetValueOrDefault(BatchKey(original.ProductBatchId), 0m);
             var availableToRestore = Quantity(Math.Max(0m, originallySold - alreadyRestored));
             if (availableToRestore <= 0m) continue;
 
@@ -470,21 +486,10 @@ public sealed class LocalSaleReturnService(
             throw new InvalidOperationException("A valid idempotency key is required.");
     }
 
-    private static void EnsurePrecision(decimal requested, decimal original)
+    private static void EnsurePrecision(decimal requested, int decimalPlaces)
     {
-        static int Digits(decimal value)
-        {
-            value = Math.Abs(value);
-            var places = 0;
-            while (value != decimal.Truncate(value) && places < 6)
-            {
-                value *= 10m;
-                places++;
-            }
-            return places;
-        }
-
-        if (Digits(requested) > Digits(original))
+        var rounded = decimal.Round(requested, decimalPlaces, MidpointRounding.AwayFromZero);
+        if (rounded != requested)
             throw new InvalidOperationException("Return quantity exceeds the selected unit precision.");
     }
 

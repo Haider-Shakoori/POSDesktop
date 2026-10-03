@@ -79,7 +79,7 @@ public sealed class SalesIntegrationTests
     }
 
     [Fact]
-    public async Task Payments_require_exact_applied_total_and_non_cash_cannot_generate_change()
+    public async Task Walk_in_partial_payment_requires_customer_and_non_cash_cannot_generate_change()
     {
         var root = Path.Combine(Path.GetTempPath(), "BusinessOS-POS-sales-tests", Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(root);
@@ -96,7 +96,7 @@ public sealed class SalesIntegrationTests
                     [new PosCheckoutLineRequest(product.ProductUnitId, 1m)],
                     0m,
                     [new PosPaymentRequest("bank", product.Price - 1m)])));
-            Assert.Contains("exactly match", shortPayment.Message);
+            Assert.Contains("registered customer", shortPayment.Message);
 
             var nonCashChange = await Assert.ThrowsAsync<InvalidOperationException>(() =>
                 pos.CheckoutAsync(new PosCheckoutRequest(
