@@ -339,6 +339,112 @@ SET TenderedAmount = Amount
 WHERE TenderedAmount = '0';
 """, cancellationToken);
 
+
+        const string cashSql = """
+CREATE TABLE IF NOT EXISTS terminals (
+    Id INTEGER NOT NULL CONSTRAINT PK_terminals PRIMARY KEY AUTOINCREMENT,
+    Code TEXT NOT NULL,
+    Name TEXT NOT NULL,
+    IsActive INTEGER NOT NULL DEFAULT 1
+);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_terminals_Code ON terminals (Code);
+
+CREATE TABLE IF NOT EXISTS expense_categories (
+    Id INTEGER NOT NULL CONSTRAINT PK_expense_categories PRIMARY KEY AUTOINCREMENT,
+    Code TEXT NOT NULL,
+    EntryType TEXT NOT NULL,
+    NameEn TEXT NOT NULL,
+    NameFa TEXT NULL,
+    NamePs TEXT NULL,
+    IsActive INTEGER NOT NULL DEFAULT 1,
+    SortOrder INTEGER NOT NULL DEFAULT 0
+);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_expense_categories_Code ON expense_categories (Code);
+
+CREATE TABLE IF NOT EXISTS operating_entries (
+    Id INTEGER NOT NULL CONSTRAINT PK_operating_entries PRIMARY KEY AUTOINCREMENT,
+    Number TEXT NOT NULL,
+    IdempotencyKey TEXT NOT NULL,
+    ExpenseCategoryId INTEGER NOT NULL,
+    PaymentMethodId INTEGER NOT NULL,
+    RecordedByUserId INTEGER NOT NULL,
+    EntryType TEXT NOT NULL,
+    Amount TEXT NOT NULL,
+    Reference TEXT NULL,
+    Description TEXT NULL,
+    OccurredAt TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_operating_entries_Number ON operating_entries (Number);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_operating_entries_IdempotencyKey ON operating_entries (IdempotencyKey);
+
+CREATE TABLE IF NOT EXISTS cash_movements (
+    Id INTEGER NOT NULL CONSTRAINT PK_cash_movements PRIMARY KEY AUTOINCREMENT,
+    IdempotencyKey TEXT NOT NULL,
+    CashierShiftId INTEGER NOT NULL,
+    TerminalId INTEGER NOT NULL,
+    ActorUserId INTEGER NULL,
+    MovementType TEXT NOT NULL,
+    Direction TEXT NOT NULL,
+    Amount TEXT NOT NULL,
+    ExpectedCashAfter TEXT NOT NULL,
+    SourceType TEXT NULL,
+    SourceId INTEGER NULL,
+    ReferenceNumber TEXT NULL,
+    Reason TEXT NULL,
+    OccurredAt TEXT NOT NULL,
+    CreatedAt TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_cash_movements_IdempotencyKey ON cash_movements (IdempotencyKey);
+CREATE INDEX IF NOT EXISTS IX_cash_movements_shift_id ON cash_movements (CashierShiftId, Id);
+
+CREATE TABLE IF NOT EXISTS cashier_shift_closures (
+    Id INTEGER NOT NULL CONSTRAINT PK_cashier_shift_closures PRIMARY KEY AUTOINCREMENT,
+    IdempotencyKey TEXT NOT NULL,
+    CashierShiftId INTEGER NOT NULL,
+    Version INTEGER NOT NULL,
+    ClosedByUserId INTEGER NOT NULL,
+    ExpectedCash TEXT NOT NULL,
+    ActualCash TEXT NOT NULL,
+    Variance TEXT NOT NULL,
+    Tolerance TEXT NOT NULL,
+    WithinTolerance INTEGER NOT NULL,
+    VarianceReason TEXT NULL,
+    ClosingNotes TEXT NULL,
+    ClosedAt TEXT NOT NULL,
+    CreatedAt TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_cashier_shift_closures_IdempotencyKey ON cashier_shift_closures (IdempotencyKey);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_cashier_shift_closures_shift_version
+ON cashier_shift_closures (CashierShiftId, Version);
+""";
+        await context.Database.ExecuteSqlRawAsync(cashSql, cancellationToken);
+
+        await EnsureColumnAsync(context, "cashier_shifts", "TerminalId", "INTEGER NOT NULL DEFAULT 1", cancellationToken);
+        await EnsureColumnAsync(context, "cashier_shifts", "BusinessDate", "TEXT NULL", cancellationToken);
+        await EnsureColumnAsync(context, "cashier_shifts", "OpenIdempotencyKey", "TEXT NULL", cancellationToken);
+        await EnsureColumnAsync(context, "cashier_shifts", "ExpectedCash", "TEXT NOT NULL DEFAULT '0'", cancellationToken);
+        await EnsureColumnAsync(context, "cashier_shifts", "ActualCash", "TEXT NULL", cancellationToken);
+        await EnsureColumnAsync(context, "cashier_shifts", "Variance", "TEXT NULL", cancellationToken);
+        await EnsureColumnAsync(context, "cashier_shifts", "VarianceWithinTolerance", "INTEGER NULL", cancellationToken);
+        await EnsureColumnAsync(context, "cashier_shifts", "VarianceReason", "TEXT NULL", cancellationToken);
+        await EnsureColumnAsync(context, "cashier_shifts", "ClosingNotes", "TEXT NULL", cancellationToken);
+        await EnsureColumnAsync(context, "cashier_shifts", "ClosedByUserId", "INTEGER NULL", cancellationToken);
+        await EnsureColumnAsync(context, "cashier_shifts", "ReopenedAt", "TEXT NULL", cancellationToken);
+        await EnsureColumnAsync(context, "cashier_shifts", "ReopenedByUserId", "INTEGER NULL", cancellationToken);
+
+        await context.Database.ExecuteSqlRawAsync("""
+CREATE UNIQUE INDEX IF NOT EXISTS IX_cashier_shifts_OpenIdempotencyKey
+ON cashier_shifts (OpenIdempotencyKey)
+WHERE OpenIdempotencyKey IS NOT NULL;
+CREATE INDEX IF NOT EXISTS IX_cashier_shifts_TerminalId_Status ON cashier_shifts (TerminalId, Status);
+UPDATE cashier_shifts
+SET ExpectedCash = OpeningCash
+WHERE CAST(ExpectedCash AS REAL) = 0 AND CAST(OpeningCash AS REAL) <> 0;
+UPDATE cashier_shifts
+SET BusinessDate = substr(OpenedAt, 1, 10)
+WHERE BusinessDate IS NULL;
+""", cancellationToken);
+
         const string customerSalesSql = """
 CREATE TABLE IF NOT EXISTS customers (
     Id INTEGER NOT NULL CONSTRAINT PK_customers PRIMARY KEY AUTOINCREMENT,

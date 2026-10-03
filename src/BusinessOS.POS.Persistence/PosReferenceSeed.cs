@@ -42,6 +42,33 @@ internal static class PosReferenceSeed
                 Method("other", "Other", "سایر", "نور", false, 40));
         }
 
+        if (!await context.Terminals.AnyAsync(cancellationToken))
+        {
+            context.Terminals.Add(new TerminalEntity
+            {
+                Code = "COUNTER-1",
+                Name = "Main Counter",
+                IsActive = true,
+            });
+        }
+
+        if (!await context.ExpenseCategories.AnyAsync(cancellationToken))
+        {
+            context.ExpenseCategories.AddRange(
+                Expense("rent", "expense", "Rent", "کرایه", "کرایه", 10),
+                Expense("electricity", "expense", "Electricity", "برق", "برېښنا", 20),
+                Expense("salary", "expense", "Salary", "معاش", "معاش", 30),
+                Expense("transport", "expense", "Transportation", "ترانسپورت", "ترانسپورټ", 40),
+                Expense("food", "expense", "Food", "غذا", "خواړه", 50),
+                Expense("maintenance", "expense", "Maintenance", "نگهداری", "ساتنه", 60),
+                Expense("internet", "expense", "Internet", "انترنت", "انټرنېټ", 70),
+                Expense("cleaning", "expense", "Cleaning", "پاک‌کاری", "پاکوالی", 80),
+                Expense("shop_supplies", "expense", "Shop Supplies", "لوازم فروشگاه", "د دوکان توکي", 90),
+                Expense("repair", "expense", "Repair", "ترمیم", "ترمیم", 100),
+                Expense("misc_expense", "expense", "Miscellaneous", "متفرقه", "نور مصارف", 110),
+                Expense("other_income", "income", "Other Income", "عاید سایر", "نور عاید", 200));
+        }
+
         await context.SaveChangesAsync(cancellationToken);
 
         if (await context.Products.AnyAsync(cancellationToken))
@@ -147,4 +174,7 @@ internal static class PosReferenceSeed
 
     private static PaymentMethodEntity Method(string code, string en, string fa, string ps, bool cash, int order) =>
         new() { Code = code, NameEn = en, NameFa = fa, NamePs = ps, IsCash = cash, SortOrder = order, IsActive = true };
+
+    private static ExpenseCategoryEntity Expense(string code, string type, string en, string fa, string ps, int order) =>
+        new() { Code = code, EntryType = type, NameEn = en, NameFa = fa, NamePs = ps, SortOrder = order, IsActive = true };
 }

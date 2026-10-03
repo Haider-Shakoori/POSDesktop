@@ -39,7 +39,12 @@ public sealed class PosDbContext(DbContextOptions<PosDbContext> options) : DbCon
     public DbSet<StockCountItemEntity> StockCountItems => Set<StockCountItemEntity>();
     public DbSet<InventoryWriteoffEntity> InventoryWriteoffs => Set<InventoryWriteoffEntity>();
     public DbSet<InventoryWriteoffItemEntity> InventoryWriteoffItems => Set<InventoryWriteoffItemEntity>();
+    public DbSet<TerminalEntity> Terminals => Set<TerminalEntity>();
     public DbSet<CashierShiftEntity> CashierShifts => Set<CashierShiftEntity>();
+    public DbSet<CashMovementEntity> CashMovements => Set<CashMovementEntity>();
+    public DbSet<CashierShiftClosureEntity> CashierShiftClosures => Set<CashierShiftClosureEntity>();
+    public DbSet<ExpenseCategoryEntity> ExpenseCategories => Set<ExpenseCategoryEntity>();
+    public DbSet<OperatingEntryEntity> OperatingEntries => Set<OperatingEntryEntity>();
     public DbSet<DocumentSequenceEntity> DocumentSequences => Set<DocumentSequenceEntity>();
     public DbSet<SaleEntity> Sales => Set<SaleEntity>();
     public DbSet<SaleItemEntity> SaleItems => Set<SaleItemEntity>();
@@ -384,12 +389,65 @@ public sealed class PosDbContext(DbContextOptions<PosDbContext> options) : DbCon
         writeoffItem.Property(x => x.QuantityBase).HasPrecision(20, 6);
         writeoffItem.Property(x => x.CostAmount).HasPrecision(18, 4);
 
+        var terminal = modelBuilder.Entity<TerminalEntity>();
+        terminal.ToTable("terminals");
+        terminal.HasKey(x => x.Id);
+        terminal.Property(x => x.Code).HasMaxLength(40).IsRequired();
+        terminal.Property(x => x.Name).HasMaxLength(120).IsRequired();
+        terminal.HasIndex(x => x.Code).IsUnique();
+
         var shift = modelBuilder.Entity<CashierShiftEntity>();
         shift.ToTable("cashier_shifts");
         shift.HasKey(x => x.Id);
         shift.Property(x => x.Status).HasMaxLength(20).IsRequired();
+        shift.Property(x => x.OpenIdempotencyKey).HasMaxLength(64);
+        shift.HasIndex(x => x.OpenIdempotencyKey).IsUnique();
         shift.Property(x => x.OpeningCash).HasPrecision(18, 2);
+        shift.Property(x => x.ExpectedCash).HasPrecision(18, 2);
+        shift.Property(x => x.ActualCash).HasPrecision(18, 2);
+        shift.Property(x => x.Variance).HasPrecision(18, 2);
         shift.HasIndex(x => new { x.UserId, x.Status });
+        shift.HasIndex(x => new { x.TerminalId, x.Status });
+
+        var cashMovement = modelBuilder.Entity<CashMovementEntity>();
+        cashMovement.ToTable("cash_movements");
+        cashMovement.HasKey(x => x.Id);
+        cashMovement.Property(x => x.IdempotencyKey).HasMaxLength(160).IsRequired();
+        cashMovement.HasIndex(x => x.IdempotencyKey).IsUnique();
+        cashMovement.Property(x => x.MovementType).HasMaxLength(50).IsRequired();
+        cashMovement.Property(x => x.Direction).HasMaxLength(10).IsRequired();
+        cashMovement.Property(x => x.Amount).HasPrecision(18, 2);
+        cashMovement.Property(x => x.ExpectedCashAfter).HasPrecision(18, 2);
+        cashMovement.HasIndex(x => new { x.CashierShiftId, x.Id });
+
+        var shiftClosure = modelBuilder.Entity<CashierShiftClosureEntity>();
+        shiftClosure.ToTable("cashier_shift_closures");
+        shiftClosure.HasKey(x => x.Id);
+        shiftClosure.Property(x => x.IdempotencyKey).HasMaxLength(64).IsRequired();
+        shiftClosure.HasIndex(x => x.IdempotencyKey).IsUnique();
+        shiftClosure.Property(x => x.ExpectedCash).HasPrecision(18, 2);
+        shiftClosure.Property(x => x.ActualCash).HasPrecision(18, 2);
+        shiftClosure.Property(x => x.Variance).HasPrecision(18, 2);
+        shiftClosure.Property(x => x.Tolerance).HasPrecision(18, 2);
+        shiftClosure.HasIndex(x => new { x.CashierShiftId, x.Version }).IsUnique();
+
+        var expenseCategory = modelBuilder.Entity<ExpenseCategoryEntity>();
+        expenseCategory.ToTable("expense_categories");
+        expenseCategory.HasKey(x => x.Id);
+        expenseCategory.Property(x => x.Code).HasMaxLength(60).IsRequired();
+        expenseCategory.HasIndex(x => x.Code).IsUnique();
+        expenseCategory.Property(x => x.EntryType).HasMaxLength(20).IsRequired();
+
+        var operatingEntry = modelBuilder.Entity<OperatingEntryEntity>();
+        operatingEntry.ToTable("operating_entries");
+        operatingEntry.HasKey(x => x.Id);
+        operatingEntry.Property(x => x.Number).HasMaxLength(40).IsRequired();
+        operatingEntry.HasIndex(x => x.Number).IsUnique();
+        operatingEntry.Property(x => x.IdempotencyKey).HasMaxLength(64).IsRequired();
+        operatingEntry.HasIndex(x => x.IdempotencyKey).IsUnique();
+        operatingEntry.Property(x => x.EntryType).HasMaxLength(20).IsRequired();
+        operatingEntry.Property(x => x.Amount).HasPrecision(18, 2);
+        operatingEntry.HasIndex(x => new { x.EntryType, x.Id });
 
         var sequence = modelBuilder.Entity<DocumentSequenceEntity>();
         sequence.ToTable("document_sequences");
