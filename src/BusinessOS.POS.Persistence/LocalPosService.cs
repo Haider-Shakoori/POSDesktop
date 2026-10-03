@@ -622,10 +622,17 @@ public sealed class LocalPosService(
             .Where(x => ids.Contains(x.Id))
             .ToDictionaryAsync(x => x.Id, cancellationToken);
 
-        var lines = held.Items.Select(item =>
+        var lines = new List<PosHeldSaleLine>(held.Items.Count);
+        foreach (var item in held.Items)
         {
             var productUnit = units[item.ProductUnitId];
-            return new PosHeldSaleLine(
+            decimal? availableBase = null;
+            if (productUnit.Product.TrackStock && productUnit.Product.TrackExpiry)
+            {
+                availableBase = await GetSellableBaseQuantityAsync(context, productUnit.Product, cancellationToken);
+            }
+
+            lines.Add(new PosHeldSaleLine(
                 item.ProductUnitId,
                 item.ProductNameSnapshot,
                 item.SkuSnapshot,
@@ -633,12 +640,12 @@ public sealed class LocalPosService(
                 item.Quantity,
                 item.UnitPriceSnapshot,
                 item.LineDiscountAmount,
-                Available(productUnit),
+                Available(productUnit, availableBase),
                 productUnit.MinimumSellingPrice ?? productUnit.Product.MinimumSellingPrice,
                 productUnit.Product.TrackStock,
                 productUnit.Unit.DecimalPlaces,
-                productUnit.ConversionFactor);
-        }).ToList();
+                productUnit.ConversionFactor));
+        }
 
         held.Status = "resumed";
         held.ResumedAt = DateTimeOffset.UtcNow;
@@ -651,6 +658,40 @@ public sealed class LocalPosService(
             held.SaleDiscountAmount,
             held.Notes,
             lines);
+    }
+
+    public async Task ReleaseHeldSaleAsync(
+        long heldSaleId,
+        CancellationToken cancellationToken = default)
+    {
+        authorizer.Demand("sales.hold");
+        var user = RequireUser();
+
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        var held = await context.HeldSales
+            .SingleOrDefaultAsync(x => x.Id == heldSaleId, cancellationToken)
+            ?? throw new InvalidOperationException("Held sale was not found.");
+
+        if (held.Status != "held")
+        {
+            throw new InvalidOperationException("Only an active held sale can be released.");
+        }
+
+        if (held.CashierUserId != user.UserId && !authorizer.HasPermission("sales.void"))
+        {
+            throw new InvalidOperationException("This held sale belongs to another cashier.");
+        }
+
+        held.Status = "released";
+        held.ReleasedAt = DateTimeOffset.UtcNow;
+        context.AuditLogs.Add(new AuditLogEntity
+        {
+            ActorUserId = user.UserId,
+            Event = "sales.held_sale.released",
+            CreatedAt = DateTimeOffset.UtcNow,
+            DetailsJson = "{\"held_sale_number\":\"" + held.Number + "\"}",
+        });
+        await context.SaveChangesAsync(cancellationToken);
     }
 
     private BusinessOS.POS.Domain.Authentication.UserSessionSnapshot RequireUser() =>
