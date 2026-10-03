@@ -34,6 +34,9 @@ public sealed class ReportingDashboardIntegrationTests
             var cash = provider.GetRequiredService<ICashManagementService>();
             var reports = provider.GetRequiredService<IReportingService>();
 
+            var baselineInventoryValue = (await reports.BuildAsync(
+                new ReportFilters(DateTime.Today, DateTime.Today))).Summary.InventoryValue ?? 0m;
+
             var category = await catalog.SaveCategoryAsync(new CatalogCategorySaveRequest(
                 null, null, "Beverages", "نوشیدنی", "څښاک", 10, true));
             var product = await CreateProductAsync(provider, "REPORT-HISTORY", 30m, 2m, category.Id);
@@ -101,7 +104,7 @@ public sealed class ReportingDashboardIntegrationTests
             Assert.Equal(2m, report.Summary.OtherIncome);
             Assert.Equal(17m, report.Summary.NetProfit);
             Assert.Equal(30m, report.Summary.AverageOrderValue);
-            Assert.Equal(90m, report.Summary.InventoryValue);
+            Assert.Equal(baselineInventoryValue + 90m, report.Summary.InventoryValue);
 
             var top = Assert.Single(report.TopProducts);
             Assert.Equal(product.ProductId, top.ProductId);
