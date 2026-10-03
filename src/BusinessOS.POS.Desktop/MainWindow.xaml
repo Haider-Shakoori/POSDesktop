@@ -5,6 +5,8 @@
         xmlns:catalog="clr-namespace:BusinessOS.POS.Desktop.Catalog"
         xmlns:cash="clr-namespace:BusinessOS.POS.Desktop.Cash"
         xmlns:closing="clr-namespace:BusinessOS.POS.Desktop.Closing"
+        xmlns:dashboard="clr-namespace:BusinessOS.POS.Desktop.Dashboard"
+        xmlns:reports="clr-namespace:BusinessOS.POS.Desktop.Reports"
         xmlns:expenses="clr-namespace:BusinessOS.POS.Desktop.Expenses"
         xmlns:inventory="clr-namespace:BusinessOS.POS.Desktop.Inventory"
         xmlns:sales="clr-namespace:BusinessOS.POS.Desktop.Sales"
@@ -22,102 +24,7 @@
         FlowDirection="{Binding FlowDirection}">
     <Window.Resources>
         <DataTemplate x:Key="DashboardTemplate">
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                <StackPanel Margin="0,0,8,24">
-                    <Grid Margin="0,0,0,20">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition />
-                            <ColumnDefinition Width="16" />
-                            <ColumnDefinition />
-                            <ColumnDefinition Width="16" />
-                            <ColumnDefinition />
-                            <ColumnDefinition Width="16" />
-                            <ColumnDefinition />
-                        </Grid.ColumnDefinitions>
-
-                        <Border Style="{StaticResource CardBorderStyle}" Grid.Column="0">
-                            <StackPanel>
-                                <TextBlock Text="TODAY'S SALES" Style="{StaticResource StatLabelStyle}" />
-                                <TextBlock Text="AFN 0" Style="{StaticResource StatValueStyle}" />
-                                <TextBlock Text="Ready for live POS data" Style="{StaticResource MutedTextStyle}" />
-                            </StackPanel>
-                        </Border>
-                        <Border Style="{StaticResource CardBorderStyle}" Grid.Column="2">
-                            <StackPanel>
-                                <TextBlock Text="TRANSACTIONS" Style="{StaticResource StatLabelStyle}" />
-                                <TextBlock Text="0" Style="{StaticResource StatValueStyle}" />
-                                <TextBlock Text="Sales and returns" Style="{StaticResource MutedTextStyle}" />
-                            </StackPanel>
-                        </Border>
-                        <Border Style="{StaticResource CardBorderStyle}" Grid.Column="4">
-                            <StackPanel>
-                                <TextBlock Text="CASH ON HAND" Style="{StaticResource StatLabelStyle}" />
-                                <TextBlock Text="AFN 0" Style="{StaticResource StatValueStyle}" />
-                                <TextBlock Text="Current cashier shift" Style="{StaticResource MutedTextStyle}" />
-                            </StackPanel>
-                        </Border>
-                        <Border Style="{StaticResource CardBorderStyle}" Grid.Column="6">
-                            <StackPanel>
-                                <TextBlock Text="LOW STOCK" Style="{StaticResource StatLabelStyle}" />
-                                <TextBlock Text="0" Style="{StaticResource StatValueStyle}" />
-                                <TextBlock Text="Inventory alerts" Style="{StaticResource MutedTextStyle}" />
-                            </StackPanel>
-                        </Border>
-                    </Grid>
-
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="2*" />
-                            <ColumnDefinition Width="18" />
-                            <ColumnDefinition />
-                        </Grid.ColumnDefinitions>
-
-                        <Border Style="{StaticResource CardBorderStyle}">
-                            <StackPanel>
-                                <TextBlock Text="Quick actions" Style="{StaticResource SectionTitleStyle}" />
-                                <TextBlock Text="Start the most common cashier workflows." Style="{StaticResource MutedTextStyle}" Margin="0,4,0,18" />
-                                <WrapPanel>
-                                    <Button Content="New Sale" Style="{StaticResource PrimaryButtonStyle}" Margin="0,0,10,10" />
-                                    <Button Content="Open Shift" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,10,10" />
-                                    <Button Content="Receive Stock" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,10,10" />
-                                    <Button Content="Daily Closing" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,10,10" />
-                                </WrapPanel>
-                            </StackPanel>
-                        </Border>
-
-                        <Border Style="{StaticResource CardBorderStyle}" Grid.Column="2">
-                            <StackPanel>
-                                <TextBlock Text="Afghanistan profile" Style="{StaticResource SectionTitleStyle}" />
-                                <Grid Margin="0,16,0,0">
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition />
-                                        <ColumnDefinition Width="Auto" />
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel>
-                                        <TextBlock Text="Currency" Style="{StaticResource MutedTextStyle}" />
-                                        <TextBlock Text="Tax" Style="{StaticResource MutedTextStyle}" Margin="0,12,0,0" />
-                                        <TextBlock Text="Languages" Style="{StaticResource MutedTextStyle}" Margin="0,12,0,0" />
-                                        <TextBlock Text="Operation" Style="{StaticResource MutedTextStyle}" Margin="0,12,0,0" />
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="1" HorizontalAlignment="Right">
-                                        <TextBlock Text="AFN" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
-                                        <TextBlock Text="No tax" FontWeight="SemiBold" Foreground="{DynamicResource SuccessBrush}" Margin="0,12,0,0" />
-                                        <TextBlock Text="EN / دری / پښتو" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,12,0,0" />
-                                        <TextBlock Text="Offline-first" FontWeight="SemiBold" Foreground="{DynamicResource BrandPrimaryBrush}" Margin="0,12,0,0" />
-                                    </StackPanel>
-                                </Grid>
-                            </StackPanel>
-                        </Border>
-                    </Grid>
-
-                    <Border Style="{StaticResource CardBorderStyle}" Margin="0,18,0,0">
-                        <StackPanel>
-                            <TextBlock Text="Desktop foundation status" Style="{StaticResource SectionTitleStyle}" />
-                            <TextBlock Text="Shell, theme switching, module navigation and CI foundation are active. Live business data will be connected module by module from the existing POS system." TextWrapping="Wrap" Style="{StaticResource BodyTextStyle}" Margin="0,8,0,0" />
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
-            </ScrollViewer>
+            <dashboard:DashboardView DataContext="{Binding DataContext.Dashboard, RelativeSource={RelativeSource AncestorType=Window}}" />
         </DataTemplate>
 
         <DataTemplate x:Key="PosTemplate">
@@ -154,6 +61,10 @@
 
         <DataTemplate x:Key="ExpensesTemplate">
             <expenses:ExpensesView DataContext="{Binding DataContext.Expenses, RelativeSource={RelativeSource AncestorType=Window}}" />
+        </DataTemplate>
+
+        <DataTemplate x:Key="ReportsTemplate">
+            <reports:ReportsView DataContext="{Binding DataContext.Reports, RelativeSource={RelativeSource AncestorType=Window}}" />
         </DataTemplate>
 
         <DataTemplate x:Key="ModuleTemplate">
@@ -336,6 +247,9 @@
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding SelectedNavigation.Key}" Value="expenses">
                                     <Setter Property="ContentTemplate" Value="{StaticResource ExpensesTemplate}" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectedNavigation.Key}" Value="reports">
+                                    <Setter Property="ContentTemplate" Value="{StaticResource ReportsTemplate}" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
