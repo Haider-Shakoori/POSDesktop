@@ -289,6 +289,23 @@ public sealed class LocalCustomerService(
         return await MapCollectionAsync(context, collection, customer.CurrentBalance, cancellationToken);
     }
 
+
+    public async Task<IReadOnlyList<CustomerPaymentMethod>> GetPaymentMethodsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        if (!authorizer.HasPermission("customers.collect") && !authorizer.HasPermission("customers.view"))
+            throw new InvalidOperationException("The user is not allowed to view customer payment methods.");
+
+        var locale = sessions.Current?.PreferredLocale ?? "en";
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        return (await context.PaymentMethods.AsNoTracking()
+            .Where(x => x.IsActive)
+            .OrderBy(x => x.SortOrder)
+            .ToListAsync(cancellationToken))
+            .Select(x => new CustomerPaymentMethod(x.Code, Localize(x, locale), x.IsCash))
+            .ToList();
+    }
+
     private static async Task<CustomerCollectionResult> MapCollectionAsync(
         PosDbContext context,
         CustomerCollectionEntity collection,

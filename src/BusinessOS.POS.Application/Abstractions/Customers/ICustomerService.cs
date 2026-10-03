@@ -11,6 +11,7 @@ public interface ICustomerService
     Task<CustomerDetail?> GetCustomerAsync(long customerId, CancellationToken cancellationToken = default);
     Task<CustomerSummary> SaveCustomerAsync(CustomerSaveRequest request, CancellationToken cancellationToken = default);
     Task<CustomerCollectionResult> CollectAsync(CustomerCollectionRequest request, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<CustomerPaymentMethod>> GetPaymentMethodsAsync(CancellationToken cancellationToken = default);
 }
 
 public sealed record CustomerSummary(
@@ -79,6 +80,11 @@ public sealed record CustomerCollectionRequest(
     string? Reference,
     DateTimeOffset? CollectedAt,
     string? Notes);
+
+public sealed record CustomerPaymentMethod(
+    string Code,
+    string Name,
+    bool IsCash);
 
 public sealed record CustomerCollectionAllocationRow(
     long SaleId,
