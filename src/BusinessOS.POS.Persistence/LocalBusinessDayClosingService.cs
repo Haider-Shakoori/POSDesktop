@@ -234,36 +234,34 @@ public sealed class LocalBusinessDayClosingService(
     {
         date = date.Date;
         var day = await BusinessDayGuard.GetOrCreateAsync(context, date, cancellationToken);
-        var (start, end) = UtcRange(date);
-
         var shifts = await context.CashierShifts.AsNoTracking()
             .Where(x => x.BusinessDate == date)
             .ToListAsync(cancellationToken);
         var shiftIds = shifts.Select(x => x.Id).ToList();
 
         var sales = await context.Sales.AsNoTracking()
-            .Where(x => x.SoldAt >= start && x.SoldAt < end)
+            .Where(x => x.BusinessDate == date)
             .ToListAsync(cancellationToken);
         var returns = await context.SaleReturns.AsNoTracking()
-            .Where(x => x.PostedAt >= start && x.PostedAt < end)
+            .Where(x => x.BusinessDate == date)
             .ToListAsync(cancellationToken);
         var collections = await context.CustomerCollections.AsNoTracking()
-            .Where(x => x.CollectedAt >= start && x.CollectedAt < end)
+            .Where(x => x.BusinessDate == date)
             .ToListAsync(cancellationToken);
         var receipts = await context.GoodsReceipts.AsNoTracking()
-            .Where(x => x.ReceivedAt >= start && x.ReceivedAt < end)
+            .Where(x => x.BusinessDate == date)
             .ToListAsync(cancellationToken);
         var purchaseReturns = await context.PurchaseReturns.AsNoTracking()
-            .Where(x => x.PostedAt >= start && x.PostedAt < end)
+            .Where(x => x.BusinessDate == date)
             .ToListAsync(cancellationToken);
         var purchasePayments = await context.PurchasePayments.AsNoTracking()
-            .Where(x => x.PaidAt >= start && x.PaidAt < end)
+            .Where(x => x.BusinessDate == date)
             .ToListAsync(cancellationToken);
         var supplierPayments = await context.SupplierPayments.AsNoTracking()
-            .Where(x => x.PaidAt >= start && x.PaidAt < end)
+            .Where(x => x.BusinessDate == date)
             .ToListAsync(cancellationToken);
         var operating = await context.OperatingEntries.AsNoTracking()
-            .Where(x => x.OccurredAt >= start && x.OccurredAt < end)
+            .Where(x => x.BusinessDate == date)
             .ToListAsync(cancellationToken);
         List<CashMovementEntity> cashMovements = shiftIds.Count == 0
             ? []
@@ -392,15 +390,6 @@ public sealed class LocalBusinessDayClosingService(
 
     private UserSessionSnapshot RequireUser() =>
         sessions.Current ?? throw new InvalidOperationException("No user is signed in.");
-
-    private static (DateTimeOffset Start, DateTimeOffset End) UtcRange(DateTime date)
-    {
-        var localStart = DateTime.SpecifyKind(date.Date, DateTimeKind.Unspecified);
-        var localEnd = DateTime.SpecifyKind(date.Date.AddDays(1), DateTimeKind.Unspecified);
-        var start = new DateTimeOffset(localStart, TimeZoneInfo.Local.GetUtcOffset(localStart)).ToUniversalTime();
-        var end = new DateTimeOffset(localEnd, TimeZoneInfo.Local.GetUtcOffset(localEnd)).ToUniversalTime();
-        return (start, end);
-    }
 
     private static decimal Money(decimal value) =>
         decimal.Round(value, 2, MidpointRounding.AwayFromZero);
