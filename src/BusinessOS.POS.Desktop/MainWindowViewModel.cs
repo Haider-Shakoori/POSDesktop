@@ -7,6 +7,7 @@ using BusinessOS.POS.Desktop.Customers;
 using BusinessOS.POS.Desktop.Sales;
 using BusinessOS.POS.Desktop.Navigation;
 using BusinessOS.POS.Desktop.Pos;
+using BusinessOS.POS.Desktop.Purchasing;
 using CommunityToolkit.Mvvm.ComponentModel;
 using WpfFlowDirection = System.Windows.FlowDirection;
 
@@ -24,7 +25,8 @@ public partial class MainWindowViewModel : ObservableObject
         ProductCatalogViewModel catalog,
         InventoryViewModel inventory,
         SalesViewModel sales,
-        CustomersViewModel customers)
+        CustomersViewModel customers,
+        PurchasingViewModel purchasing)
     {
         _sessions = sessions;
         Pos = pos;
@@ -32,6 +34,7 @@ public partial class MainWindowViewModel : ObservableObject
         Inventory = inventory;
         Sales = sales;
         Customers = customers;
+        Purchasing = purchasing;
 
         var items = new[]
         {
@@ -85,6 +88,8 @@ public partial class MainWindowViewModel : ObservableObject
     public SalesViewModel Sales { get; }
 
     public CustomersViewModel Customers { get; }
+
+    public PurchasingViewModel Purchasing { get; }
 
     public AppearanceTheme[] Themes { get; }
 
