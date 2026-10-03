@@ -128,6 +128,72 @@ public sealed class ReportingDashboardIntegrationTests
     }
 
     [Fact]
+    public async Task Return_in_range_does_not_recount_original_sale_from_an_earlier_business_day()
+    {
+        var root = NewRoot();
+        try
+        {
+            await using var provider = await BuildProviderAsync(root);
+            var purchasing = provider.GetRequiredService<IPurchasingService>();
+            var pos = provider.GetRequiredService<IPosService>();
+            var returns = provider.GetRequiredService<ISaleReturnService>();
+            var reports = provider.GetRequiredService<IReportingService>();
+
+            var product = await CreateProductAsync(provider, "REPORT-RETURN-DAY", 30m, 0m, null);
+            var supplier = await purchasing.SaveSupplierAsync(new SupplierSaveRequest(
+                null, "Historical Return Supplier", null, null, null, null, 0m, null, true));
+
+            await purchasing.PostGoodsReceiptAsync(new GoodsReceiptPostRequest(
+                Guid.NewGuid().ToString(), supplier.Id, null, null, DateTimeOffset.UtcNow,
+                0m, 0m, null, null, null, null,
+                [new GoodsReceiptLineRequest(null, product.ProductUnitId, 3m, 10m)], []));
+
+            var sale = await pos.CheckoutAsync(new PosCheckoutRequest(
+                Guid.NewGuid().ToString(),
+                [new PosCheckoutLineRequest(product.ProductUnitId, 1m)],
+                0m,
+                [new PosPaymentRequest("bank", 30m, 30m)]));
+
+            var factory = provider.GetRequiredService<IDbContextFactory<PosDbContext>>();
+            long saleItemId;
+            await using (var context = await factory.CreateDbContextAsync())
+            {
+                var saleRow = await context.Sales.SingleAsync(x => x.Id == sale.SaleId);
+                saleRow.BusinessDate = DateTime.Today.AddDays(-1);
+                saleItemId = await context.SaleItems
+                    .Where(x => x.SaleId == sale.SaleId)
+                    .Select(x => x.Id)
+                    .SingleAsync();
+                await context.SaveChangesAsync();
+            }
+
+            await returns.ReturnAsync(new SaleReturnRequest(
+                Guid.NewGuid().ToString(), sale.SaleId, "Returned on following business day",
+                [new SaleReturnLineRequest(saleItemId, 1m)],
+                [new SaleRefundRequest("bank", 30m)]));
+
+            var report = await reports.BuildAsync(new ReportFilters(DateTime.Today, DateTime.Today));
+
+            Assert.Equal(0, report.Summary.SalesCount);
+            Assert.Equal(0m, report.Summary.SalesNet);
+            Assert.Equal(30m, report.Summary.Returns);
+            Assert.Equal(-30m, report.Summary.NetSales);
+            Assert.Equal(0m, report.Summary.SalesCogs);
+            Assert.Equal(10m, report.Summary.CogsReversed);
+            Assert.Equal(-10m, report.Summary.NetCogs);
+            Assert.Equal(-20m, report.Summary.GrossProfit);
+
+            var productRow = Assert.Single(report.TopProducts);
+            Assert.Equal(product.ProductId, productRow.ProductId);
+            Assert.Equal(-1m, productRow.QuantityBase);
+            Assert.Equal(-30m, productRow.NetSales);
+            Assert.Equal(-10m, productRow.Cogs);
+            Assert.Equal(-20m, productRow.GrossProfit);
+        }
+        finally { Cleanup(root); }
+    }
+
+    [Fact]
     public async Task Report_filters_and_sales_export_use_same_range_and_lookup_scope()
     {
         var root = NewRoot();
