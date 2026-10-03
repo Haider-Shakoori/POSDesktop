@@ -35,7 +35,7 @@ public sealed class LocalPosService(
         var shift = await context.CashierShifts
             .AsNoTracking()
             .Where(x => x.UserId == user.UserId && x.Status == "open")
-            .OrderByDescending(x => x.OpenedAt)
+            .OrderByDescending(x => x.Id)
             .FirstOrDefaultAsync(cancellationToken);
 
         return new PosReferenceData(
@@ -119,7 +119,7 @@ public sealed class LocalPosService(
 
         var existing = await context.CashierShifts
             .Where(x => x.UserId == user.UserId && x.Status == "open")
-            .OrderByDescending(x => x.OpenedAt)
+            .OrderByDescending(x => x.Id)
             .FirstOrDefaultAsync(cancellationToken);
 
         if (existing is not null)
@@ -314,7 +314,7 @@ public sealed class LocalPosService(
         {
             shift = await context.CashierShifts
                 .Where(x => x.UserId == user.UserId && x.Status == "open")
-                .OrderByDescending(x => x.OpenedAt)
+                .OrderByDescending(x => x.Id)
                 .FirstOrDefaultAsync(cancellationToken);
 
             if (shift is null)
@@ -519,7 +519,7 @@ public sealed class LocalPosService(
             query = query.Where(x => x.CashierUserId == user.UserId);
         }
 
-        return (await query.OrderByDescending(x => x.HeldAt).Take(50).ToListAsync(cancellationToken))
+        return (await query.OrderByDescending(x => x.Id).Take(50).ToListAsync(cancellationToken))
             .Select(ToHeldSummary)
             .ToList();
     }
@@ -707,8 +707,7 @@ public sealed class LocalPosService(
 
         var layers = await context.InventoryCostLayers
             .Where(x => x.ProductId == product.Id)
-            .OrderBy(x => x.ReceivedAt)
-            .ThenBy(x => x.Id)
+            .OrderBy(x => x.Id)
             .ToListAsync(cancellationToken);
 
         var remaining = quantityBase;
