@@ -1,5 +1,6 @@
 using BusinessOS.POS.Application;
 using BusinessOS.POS.Domain;
+using Xunit;
 
 namespace BusinessOS.POS.UnitTests;
 
