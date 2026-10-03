@@ -215,6 +215,7 @@ public sealed class LocalCustomerService(
         }
 
         var collectedAt = request.CollectedAt ?? DateTimeOffset.UtcNow;
+        await BusinessDayGuard.EnsureOpenAsync(context, collectedAt, cancellationToken);
         var collection = new CustomerCollectionEntity
         {
             Number = await NextNumberAsync(context, "customer_collection", "COL", collectedAt, cancellationToken),

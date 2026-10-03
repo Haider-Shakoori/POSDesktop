@@ -55,6 +55,7 @@ internal static class CashLedgerEngine
             throw new InvalidOperationException("Cash movement requires an open cashier shift.");
         if (shift.UserId != actorUserId && !allowOtherUser)
             throw new InvalidOperationException("The selected cash drawer belongs to another user.");
+        await BusinessDayGuard.EnsureOpenAsync(context, shift.BusinessDate, cancellationToken);
         if (occurredAt < shift.OpenedAt)
             throw new InvalidOperationException("Cash transaction time cannot be before the cashier shift opened.");
 

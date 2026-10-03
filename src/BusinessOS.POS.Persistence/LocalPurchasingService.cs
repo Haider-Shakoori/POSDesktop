@@ -543,6 +543,7 @@ public sealed class LocalPurchasingService(
         }
 
         var receivedAt = request.ReceivedAt ?? DateTimeOffset.UtcNow;
+        await BusinessDayGuard.EnsureOpenAsync(context, receivedAt, cancellationToken);
         var receipt = new GoodsReceiptEntity
         {
             Number = await NextNumberAsync(context, "goods_receipt", "GRN", receivedAt, cancellationToken),
@@ -853,6 +854,7 @@ public sealed class LocalPurchasingService(
 
         var returnTotal = Money(prepared.Sum(x => x.ReturnAmount));
         var now = DateTimeOffset.UtcNow;
+        await BusinessDayGuard.EnsureOpenAsync(context, now, cancellationToken);
         var purchaseReturn = new PurchaseReturnEntity
         {
             Number = await NextNumberAsync(context, "purchase_return", "PRT", now, cancellationToken),
@@ -971,6 +973,7 @@ public sealed class LocalPurchasingService(
         if (method == "cash") await DemandOpenCashShiftAsync(context, user.UserId, cancellationToken);
 
         var paidAt = request.PaidAt ?? DateTimeOffset.UtcNow;
+        await BusinessDayGuard.EnsureOpenAsync(context, paidAt, cancellationToken);
         var payment = new SupplierPaymentEntity
         {
             Number = await NextNumberAsync(context, "supplier_payment", "SPY", paidAt, cancellationToken),
