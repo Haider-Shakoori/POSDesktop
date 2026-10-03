@@ -338,6 +338,147 @@ UPDATE sale_payments
 SET TenderedAmount = Amount
 WHERE TenderedAmount = '0';
 """, cancellationToken);
+
+        const string customerSalesSql = """
+CREATE TABLE IF NOT EXISTS customers (
+    Id INTEGER NOT NULL CONSTRAINT PK_customers PRIMARY KEY AUTOINCREMENT,
+    Name TEXT NOT NULL,
+    Phone TEXT NULL,
+    AlternatePhone TEXT NULL,
+    Address TEXT NULL,
+    CreditLimit TEXT NOT NULL DEFAULT '0',
+    OpeningBalance TEXT NOT NULL DEFAULT '0',
+    CurrentBalance TEXT NOT NULL DEFAULT '0',
+    IsActive INTEGER NOT NULL DEFAULT 1
+);
+CREATE INDEX IF NOT EXISTS IX_customers_Name ON customers (Name);
+
+CREATE TABLE IF NOT EXISTS customer_ledger_entries (
+    Id INTEGER NOT NULL CONSTRAINT PK_customer_ledger_entries PRIMARY KEY AUTOINCREMENT,
+    CustomerId INTEGER NOT NULL,
+    ActorUserId INTEGER NULL,
+    EntryType TEXT NOT NULL,
+    Debit TEXT NOT NULL DEFAULT '0',
+    Credit TEXT NOT NULL DEFAULT '0',
+    BalanceAfter TEXT NOT NULL,
+    ReferenceType TEXT NOT NULL,
+    ReferenceId INTEGER NOT NULL,
+    ReferenceNumber TEXT NULL,
+    OccurredAt TEXT NOT NULL,
+    Notes TEXT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_customer_ledger_unique
+ON customer_ledger_entries (CustomerId, EntryType, ReferenceType, ReferenceId);
+CREATE INDEX IF NOT EXISTS IX_customer_ledger_customer_id
+ON customer_ledger_entries (CustomerId, Id);
+
+CREATE TABLE IF NOT EXISTS customer_collections (
+    Id INTEGER NOT NULL CONSTRAINT PK_customer_collections PRIMARY KEY AUTOINCREMENT,
+    Number TEXT NOT NULL,
+    IdempotencyKey TEXT NOT NULL,
+    CustomerId INTEGER NOT NULL,
+    PaymentMethodCode TEXT NOT NULL,
+    RecordedByUserId INTEGER NOT NULL,
+    Amount TEXT NOT NULL,
+    TenderedAmount TEXT NOT NULL,
+    ChangeAmount TEXT NOT NULL,
+    Reference TEXT NULL,
+    CollectedAt TEXT NOT NULL,
+    Notes TEXT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_customer_collections_Number ON customer_collections (Number);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_customer_collections_IdempotencyKey ON customer_collections (IdempotencyKey);
+
+CREATE TABLE IF NOT EXISTS customer_collection_allocations (
+    Id INTEGER NOT NULL CONSTRAINT PK_customer_collection_allocations PRIMARY KEY AUTOINCREMENT,
+    CustomerCollectionId INTEGER NOT NULL,
+    SaleId INTEGER NOT NULL,
+    Amount TEXT NOT NULL,
+    CONSTRAINT FK_customer_collection_allocations_collections FOREIGN KEY (CustomerCollectionId) REFERENCES customer_collections (Id) ON DELETE CASCADE
+);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_customer_collection_allocation_unique
+ON customer_collection_allocations (CustomerCollectionId, SaleId);
+
+CREATE TABLE IF NOT EXISTS sale_returns (
+    Id INTEGER NOT NULL CONSTRAINT PK_sale_returns PRIMARY KEY AUTOINCREMENT,
+    Number TEXT NOT NULL,
+    IdempotencyKey TEXT NOT NULL,
+    SaleId INTEGER NOT NULL,
+    CreatedByUserId INTEGER NOT NULL,
+    Type TEXT NOT NULL,
+    Status TEXT NOT NULL,
+    Reason TEXT NOT NULL,
+    ReturnTotal TEXT NOT NULL,
+    CogsReversed TEXT NOT NULL,
+    ReceivableReversed TEXT NOT NULL,
+    RefundTotal TEXT NOT NULL,
+    PostedAt TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_sale_returns_Number ON sale_returns (Number);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_sale_returns_IdempotencyKey ON sale_returns (IdempotencyKey);
+
+CREATE TABLE IF NOT EXISTS sale_return_items (
+    Id INTEGER NOT NULL CONSTRAINT PK_sale_return_items PRIMARY KEY AUTOINCREMENT,
+    SaleReturnId INTEGER NOT NULL,
+    SaleItemId INTEGER NOT NULL,
+    Quantity TEXT NOT NULL,
+    QuantityBase TEXT NOT NULL,
+    ReturnAmount TEXT NOT NULL,
+    CogsAmount TEXT NOT NULL,
+    CONSTRAINT FK_sale_return_items_returns FOREIGN KEY (SaleReturnId) REFERENCES sale_returns (Id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS sale_refunds (
+    Id INTEGER NOT NULL CONSTRAINT PK_sale_refunds PRIMARY KEY AUTOINCREMENT,
+    IdempotencyKey TEXT NOT NULL,
+    SaleReturnId INTEGER NOT NULL,
+    PaymentMethodCode TEXT NOT NULL,
+    RecordedByUserId INTEGER NOT NULL,
+    Amount TEXT NOT NULL,
+    Reference TEXT NULL,
+    RefundedAt TEXT NOT NULL,
+    Notes TEXT NULL,
+    CONSTRAINT FK_sale_refunds_returns FOREIGN KEY (SaleReturnId) REFERENCES sale_returns (Id) ON DELETE CASCADE
+);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_sale_refunds_IdempotencyKey ON sale_refunds (IdempotencyKey);
+""";
+        await context.Database.ExecuteSqlRawAsync(customerSalesSql, cancellationToken);
+
+        await EnsureColumnAsync(context, "sales", "CustomerId", "INTEGER NULL", cancellationToken);
+        await EnsureColumnAsync(context, "sales", "BalanceDue", "TEXT NOT NULL DEFAULT '0'", cancellationToken);
+        await EnsureColumnAsync(context, "sales", "ReturnedTotal", "TEXT NOT NULL DEFAULT '0'", cancellationToken);
+        await EnsureColumnAsync(context, "sales", "ReceivableReversedTotal", "TEXT NOT NULL DEFAULT '0'", cancellationToken);
+        await EnsureColumnAsync(context, "sales", "RefundedTotal", "TEXT NOT NULL DEFAULT '0'", cancellationToken);
+        await EnsureColumnAsync(context, "sales", "SettlementFinalizedAt", "TEXT NULL", cancellationToken);
+
+        await EnsureColumnAsync(context, "sale_payments", "CustomerId", "INTEGER NULL", cancellationToken);
+        await EnsureColumnAsync(context, "sale_payments", "RecordedByUserId", "INTEGER NOT NULL DEFAULT 0", cancellationToken);
+        await EnsureColumnAsync(context, "sale_payments", "IdempotencyKey", "TEXT NULL", cancellationToken);
+        await EnsureColumnAsync(context, "sale_payments", "SourceType", "TEXT NULL", cancellationToken);
+        await EnsureColumnAsync(context, "sale_payments", "SourceId", "INTEGER NULL", cancellationToken);
+        await context.Database.ExecuteSqlRawAsync("""
+CREATE UNIQUE INDEX IF NOT EXISTS IX_sale_payments_IdempotencyKey
+ON sale_payments (IdempotencyKey)
+WHERE IdempotencyKey IS NOT NULL;
+""", cancellationToken);
+
+        await EnsureColumnAsync(context, "held_sales", "CustomerId", "INTEGER NULL", cancellationToken);
+        await EnsureColumnAsync(context, "held_sales", "CustomerNameSnapshot", "TEXT NOT NULL DEFAULT 'Walk-in Customer'", cancellationToken);
+        await EnsureColumnAsync(context, "stock_movements", "SaleItemId", "INTEGER NULL", cancellationToken);
+        await context.Database.ExecuteSqlRawAsync("""
+CREATE INDEX IF NOT EXISTS IX_stock_movements_SaleItemId ON stock_movements (SaleItemId);
+""", cancellationToken);
+
+        await context.Database.ExecuteSqlRawAsync("""
+UPDATE sales
+SET BalanceDue = CASE
+    WHEN CAST(NetTotal AS REAL) > CAST(PaidAmount AS REAL)
+    THEN CAST(CAST(NetTotal AS REAL) - CAST(PaidAmount AS REAL) AS TEXT)
+    ELSE '0'
+END
+WHERE BalanceDue = '0';
+""", cancellationToken);
+
     }
 
     private static async Task EnsureColumnAsync(

@@ -8,6 +8,7 @@ public sealed class SaleEntity
     public string RequestFingerprint { get; set; } = string.Empty;
     public long CashierUserId { get; set; }
     public long? CashierShiftId { get; set; }
+    public long? CustomerId { get; set; }
     public string Status { get; set; } = "completed";
     public string PaymentStatus { get; set; } = "paid";
     public string CustomerNameSnapshot { get; set; } = "Walk-in Customer";
@@ -19,6 +20,11 @@ public sealed class SaleEntity
     public decimal GrossProfit { get; set; }
     public decimal PaidAmount { get; set; }
     public decimal ChangeAmount { get; set; }
+    public decimal BalanceDue { get; set; }
+    public decimal ReturnedTotal { get; set; }
+    public decimal ReceivableReversedTotal { get; set; }
+    public decimal RefundedTotal { get; set; }
+    public DateTimeOffset? SettlementFinalizedAt { get; set; }
     public DateTimeOffset SoldAt { get; set; }
     public string? Notes { get; set; }
     public List<SaleItemEntity> Items { get; } = [];

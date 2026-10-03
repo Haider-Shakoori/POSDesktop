@@ -41,6 +41,7 @@
                         <DataGridTextColumn Header="Customer" Binding="{Binding CustomerName}" Width="*" />
                         <DataGridTextColumn Header="Total" Binding="{Binding NetTotal, StringFormat=N2}" Width="86" />
                         <DataGridTextColumn Header="Paid" Binding="{Binding PaidAmount, StringFormat=N2}" Width="80" />
+                        <DataGridTextColumn Header="Balance" Binding="{Binding BalanceDue, StringFormat=N2}" Width="82" />
                         <DataGridTextColumn Header="Status" Binding="{Binding PaymentStatus}" Width="82" />
                         <DataGridTextColumn Header="Sold" Binding="{Binding SoldAt, StringFormat=g}" Width="142" />
                     </DataGrid.Columns>
@@ -131,6 +132,86 @@
                         </DataGrid.Columns>
                     </DataGrid>
 
+                    <TextBlock Text="Returns / void" Style="{StaticResource SectionTitleStyle}" Margin="0,14,0,6" />
+                    <TextBlock Text="Enter quantities only for the lines being returned. A void reverses all remaining returnable quantities."
+                               Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" Margin="0,0,0,8" />
+                    <DataGrid ItemsSource="{Binding ReturnLines}"
+                              AutoGenerateColumns="False"
+                              CanUserAddRows="False"
+                              MinHeight="130"
+                              MaxHeight="220">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Item" Binding="{Binding Line.Product}" Width="*" IsReadOnly="True" />
+                            <DataGridTextColumn Header="Sold" Binding="{Binding Line.Quantity, StringFormat=N2}" Width="66" IsReadOnly="True" />
+                            <DataGridTextColumn Header="Returned" Binding="{Binding Line.ReturnedQuantity, StringFormat=N2}" Width="76" IsReadOnly="True" />
+                            <DataGridTextColumn Header="Returnable" Binding="{Binding Line.ReturnableQuantity, StringFormat=N2}" Width="82" IsReadOnly="True" />
+                            <DataGridTextColumn Header="Return Qty" Binding="{Binding RequestedQuantity, UpdateSourceTrigger=PropertyChanged}" Width="82" />
+                            <DataGridTextColumn Header="Amount" Binding="{Binding EstimatedReturnAmount, StringFormat=N2}" Width="78" IsReadOnly="True" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+
+                    <Grid Margin="0,8,0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition />
+                            <ColumnDefinition Width="8" />
+                            <ColumnDefinition Width="150" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox Text="{Binding ReturnReason, UpdateSourceTrigger=PropertyChanged}"
+                                 ToolTip="Return / void reason" />
+                        <ComboBox Grid.Column="2"
+                                  ItemsSource="{Binding RefundMethods}"
+                                  SelectedItem="{Binding SelectedRefundMethod}"
+                                  DisplayMemberPath="Name"
+                                  ToolTip="Refund payment method" />
+                    </Grid>
+                    <TextBox Text="{Binding RefundReference}" ToolTip="Refund reference (optional)" Margin="0,0,0,8" />
+
+                    <Grid Margin="0,0,0,8">
+                        <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="8" /><ColumnDefinition /></Grid.ColumnDefinitions>
+                        <Border Background="{DynamicResource BrandPrimarySoftBrush}" CornerRadius="10" Padding="10">
+                            <StackPanel>
+                                <TextBlock Text="{Binding RequestedReturnTotal, StringFormat=Selected return: AFN {0:N2}}" FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding RequestedReceivableReversal, StringFormat=Receivable reversal: AFN {0:N2}}" Style="{StaticResource MutedTextStyle}" />
+                                <TextBlock Text="{Binding RequestedRefundDue, StringFormat=Refund due: AFN {0:N2}}" Style="{StaticResource MutedTextStyle}" />
+                            </StackPanel>
+                        </Border>
+                        <Border Grid.Column="2" Background="{DynamicResource BrandPrimarySoftBrush}" CornerRadius="10" Padding="10">
+                            <StackPanel>
+                                <TextBlock Text="{Binding VoidReturnTotal, StringFormat=Void remaining: AFN {0:N2}}" FontWeight="SemiBold" />
+                                <TextBlock Text="{Binding VoidReceivableReversal, StringFormat=Receivable reversal: AFN {0:N2}}" Style="{StaticResource MutedTextStyle}" />
+                                <TextBlock Text="{Binding VoidRefundDue, StringFormat=Refund due: AFN {0:N2}}" Style="{StaticResource MutedTextStyle}" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <Grid Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="8" /><ColumnDefinition /></Grid.ColumnDefinitions>
+                        <Button Content="Post Return"
+                                Command="{Binding PostReturnCommand}"
+                                Style="{StaticResource PrimaryButtonStyle}"
+                                IsEnabled="{Binding CanReturn}" />
+                        <Button Grid.Column="2" Content="Void Remaining Sale"
+                                Command="{Binding VoidSaleCommand}"
+                                Style="{StaticResource SecondaryButtonStyle}"
+                                IsEnabled="{Binding CanVoid}" />
+                    </Grid>
+
+                    <TextBlock Text="Return history" Style="{StaticResource SectionTitleStyle}" Margin="0,8,0,6" />
+                    <DataGrid ItemsSource="{Binding ReturnHistory}"
+                              AutoGenerateColumns="False"
+                              IsReadOnly="True"
+                              MinHeight="100"
+                              MaxHeight="180">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Number" Binding="{Binding Number}" Width="135" />
+                            <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="70" />
+                            <DataGridTextColumn Header="Return" Binding="{Binding ReturnTotal, StringFormat=N2}" Width="78" />
+                            <DataGridTextColumn Header="Receivable" Binding="{Binding ReceivableReversed, StringFormat=N2}" Width="88" />
+                            <DataGridTextColumn Header="Refund" Binding="{Binding RefundTotal, StringFormat=N2}" Width="78" />
+                            <DataGridTextColumn Header="Posted" Binding="{Binding PostedAt, StringFormat=g}" Width="135" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+
                     <Grid Margin="0,14,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition />
@@ -141,12 +222,18 @@
                             <TextBlock Text="Line discounts" Style="{StaticResource MutedTextStyle}" Margin="0,4,0,0" />
                             <TextBlock Text="Sale discount" Style="{StaticResource MutedTextStyle}" Margin="0,4,0,0" />
                             <TextBlock Text="Change" Style="{StaticResource MutedTextStyle}" Margin="0,4,0,0" />
+                            <TextBlock Text="Balance due" Style="{StaticResource MutedTextStyle}" Margin="0,4,0,0" />
+                            <TextBlock Text="Returned" Style="{StaticResource MutedTextStyle}" Margin="0,4,0,0" />
+                            <TextBlock Text="Refunded" Style="{StaticResource MutedTextStyle}" Margin="0,4,0,0" />
                         </StackPanel>
                         <StackPanel Grid.Column="1" HorizontalAlignment="Right">
                             <TextBlock Text="{Binding SelectedSaleDetail.Subtotal, StringFormat=AFN {0:N2}}" />
                             <TextBlock Text="{Binding SelectedSaleDetail.LineDiscountTotal, StringFormat=AFN {0:N2}}" Margin="0,4,0,0" />
                             <TextBlock Text="{Binding SelectedSaleDetail.SaleDiscountAmount, StringFormat=AFN {0:N2}}" Margin="0,4,0,0" />
                             <TextBlock Text="{Binding SelectedSaleDetail.ChangeAmount, StringFormat=AFN {0:N2}}" Margin="0,4,0,0" />
+                            <TextBlock Text="{Binding SelectedSaleDetail.BalanceDue, StringFormat=AFN {0:N2}}" Margin="0,4,0,0" />
+                            <TextBlock Text="{Binding SelectedSaleDetail.ReturnedTotal, StringFormat=AFN {0:N2}}" Margin="0,4,0,0" />
+                            <TextBlock Text="{Binding SelectedSaleDetail.RefundedTotal, StringFormat=AFN {0:N2}}" Margin="0,4,0,0" />
                         </StackPanel>
                     </Grid>
 
