@@ -2,6 +2,8 @@ using System.Collections.ObjectModel;
 using BusinessOS.POS.Application.Abstractions.Authentication;
 using BusinessOS.POS.Desktop.Appearance;
 using BusinessOS.POS.Desktop.Catalog;
+using BusinessOS.POS.Desktop.Cash;
+using BusinessOS.POS.Desktop.Expenses;
 using BusinessOS.POS.Desktop.Inventory;
 using BusinessOS.POS.Desktop.Customers;
 using BusinessOS.POS.Desktop.Sales;
@@ -26,7 +28,9 @@ public partial class MainWindowViewModel : ObservableObject
         InventoryViewModel inventory,
         SalesViewModel sales,
         CustomersViewModel customers,
-        PurchasingViewModel purchasing)
+        PurchasingViewModel purchasing,
+        CashViewModel cash,
+        ExpensesViewModel expenses)
     {
         _sessions = sessions;
         Pos = pos;
@@ -35,6 +39,8 @@ public partial class MainWindowViewModel : ObservableObject
         Sales = sales;
         Customers = customers;
         Purchasing = purchasing;
+        Cash = cash;
+        Expenses = expenses;
 
         var items = new[]
         {
@@ -90,6 +96,10 @@ public partial class MainWindowViewModel : ObservableObject
     public CustomersViewModel Customers { get; }
 
     public PurchasingViewModel Purchasing { get; }
+
+    public CashViewModel Cash { get; }
+
+    public ExpensesViewModel Expenses { get; }
 
     public AppearanceTheme[] Themes { get; }
 

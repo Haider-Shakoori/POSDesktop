@@ -3,6 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:pos="clr-namespace:BusinessOS.POS.Desktop.Pos"
         xmlns:catalog="clr-namespace:BusinessOS.POS.Desktop.Catalog"
+        xmlns:cash="clr-namespace:BusinessOS.POS.Desktop.Cash"
+        xmlns:expenses="clr-namespace:BusinessOS.POS.Desktop.Expenses"
         xmlns:inventory="clr-namespace:BusinessOS.POS.Desktop.Inventory"
         xmlns:sales="clr-namespace:BusinessOS.POS.Desktop.Sales"
         xmlns:customers="clr-namespace:BusinessOS.POS.Desktop.Customers"
@@ -139,6 +141,14 @@
 
         <DataTemplate x:Key="PurchasingTemplate">
             <purchasing:PurchasingView DataContext="{Binding DataContext.Purchasing, RelativeSource={RelativeSource AncestorType=Window}}" />
+        </DataTemplate>
+
+        <DataTemplate x:Key="CashTemplate">
+            <cash:CashView DataContext="{Binding DataContext.Cash, RelativeSource={RelativeSource AncestorType=Window}}" />
+        </DataTemplate>
+
+        <DataTemplate x:Key="ExpensesTemplate">
+            <expenses:ExpensesView DataContext="{Binding DataContext.Expenses, RelativeSource={RelativeSource AncestorType=Window}}" />
         </DataTemplate>
 
         <DataTemplate x:Key="ModuleTemplate">
@@ -312,6 +322,12 @@
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding SelectedNavigation.Key}" Value="purchasing">
                                     <Setter Property="ContentTemplate" Value="{StaticResource PurchasingTemplate}" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectedNavigation.Key}" Value="cash">
+                                    <Setter Property="ContentTemplate" Value="{StaticResource CashTemplate}" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectedNavigation.Key}" Value="expenses">
+                                    <Setter Property="ContentTemplate" Value="{StaticResource ExpensesTemplate}" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>

@@ -4,6 +4,8 @@ using BusinessOS.POS.Application.Abstractions.Persistence;
 using BusinessOS.POS.Application.Abstractions.Storage;
 using BusinessOS.POS.Desktop.Authentication;
 using BusinessOS.POS.Desktop.Catalog;
+using BusinessOS.POS.Desktop.Cash;
+using BusinessOS.POS.Desktop.Expenses;
 using BusinessOS.POS.Desktop.Inventory;
 using BusinessOS.POS.Desktop.Customers;
 using BusinessOS.POS.Desktop.Sales;
@@ -40,6 +42,8 @@ public partial class App : System.Windows.Application
                     services.AddTransient<SalesViewModel>();
                     services.AddTransient<CustomersViewModel>();
                     services.AddTransient<PurchasingViewModel>();
+                    services.AddTransient<CashViewModel>();
+                    services.AddTransient<ExpensesViewModel>();
                     services.AddSingleton<IReceiptPrintService, WpfReceiptPrintService>();
                     services.AddTransient<MainWindowViewModel>();
                 })
