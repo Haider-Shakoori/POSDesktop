@@ -39,6 +39,7 @@
     <SolidColorBrush x:Key="SidebarItemHoverBrush" Color="#F1F7FF" />
     <SolidColorBrush x:Key="SidebarItemSelectedBrush" Color="#DDEEFF" />
     <SolidColorBrush x:Key="SidebarItemSelectedBorderBrush" Color="#BFDBFE" />
+    <SolidColorBrush x:Key="SidebarItemSelectedForegroundBrush" Color="#0B5FC6" />
 
     <CornerRadius x:Key="CardCornerRadius">14</CornerRadius>
     <CornerRadius x:Key="ControlCornerRadius">9</CornerRadius>

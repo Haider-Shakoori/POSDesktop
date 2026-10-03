@@ -1,0 +1,73 @@
+<Window x:Class="BusinessOS.POS.Desktop.Authentication.LoginWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Sign in — BusinessOS POS"
+        Width="520"
+        Height="590"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource AppBackgroundBrush}">
+    <Grid Margin="34">
+        <Border Style="{StaticResource CardBorderStyle}" Padding="32">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <Border Width="54" Height="54" CornerRadius="15" Background="{DynamicResource BrandPrimaryBrush}">
+                        <TextBlock Text="B" Foreground="White" FontSize="24" FontWeight="Bold"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <StackPanel Margin="14,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="BusinessOS POS" FontSize="21" FontWeight="Bold"
+                                   Foreground="{DynamicResource TextPrimaryBrush}" />
+                        <TextBlock Text="Secure local sign in" Style="{StaticResource MutedTextStyle}" />
+                    </StackPanel>
+                </StackPanel>
+
+                <TextBlock Text="Staff Sign In" FontSize="25" FontWeight="Bold"
+                           Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,28,0,0" />
+                <TextBlock Text="Your account and permissions control which POS modules are available."
+                           Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" Margin="0,6,0,0" />
+
+                <TextBlock Text="Username" FontWeight="SemiBold" Margin="0,24,0,7" />
+                <TextBox Text="{Binding Username, UpdateSourceTrigger=PropertyChanged}"
+                         Height="42" Padding="12,0" VerticalContentAlignment="Center"
+                         Background="{DynamicResource SurfaceBrush}"
+                         Foreground="{DynamicResource TextPrimaryBrush}"
+                         BorderBrush="{DynamicResource BorderBrush}" />
+
+                <TextBlock Text="Password" FontWeight="SemiBold" Margin="0,16,0,7" />
+                <PasswordBox x:Name="PasswordInput"
+                             Height="42" Padding="12,0" VerticalContentAlignment="Center"
+                             Background="{DynamicResource SurfaceBrush}"
+                             Foreground="{DynamicResource TextPrimaryBrush}"
+                             BorderBrush="{DynamicResource BorderBrush}"
+                             IsEnabled="{Binding IsNotBusy}" />
+
+                <Button Content="{Binding SignInButtonText}"
+                        Style="{StaticResource PrimaryButtonStyle}"
+                        Height="44" Margin="0,22,0,0"
+                        IsDefault="True"
+                        IsEnabled="{Binding IsNotBusy}"
+                        Click="OnSignInClick" />
+
+                <Border Margin="0,16,0,0" Padding="12" CornerRadius="9"
+                        Background="{DynamicResource BrandPrimarySoftBrush}">
+                    <TextBlock Text="{Binding StatusMessage}" TextWrapping="Wrap">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="{DynamicResource BrandPrimaryDarkBrush}" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsError}" Value="True">
+                                        <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                </Border>
+
+                <TextBlock Text="Five failed attempts temporarily lock sign-in for 60 seconds."
+                           Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" Margin="0,16,0,0" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

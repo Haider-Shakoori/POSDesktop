@@ -15,8 +15,10 @@
   <ItemGroup>
     <ProjectReference Include="..\BusinessOS.POS.Application\BusinessOS.POS.Application.csproj" />
     <ProjectReference Include="..\BusinessOS.POS.Infrastructure\BusinessOS.POS.Infrastructure.csproj" />
+    <ProjectReference Include="..\BusinessOS.POS.Persistence\BusinessOS.POS.Persistence.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.12" />
   </ItemGroup>
 </Project>
