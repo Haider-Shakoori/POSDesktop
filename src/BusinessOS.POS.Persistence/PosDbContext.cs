@@ -17,6 +17,18 @@ public sealed class PosDbContext(DbContextOptions<PosDbContext> options) : DbCon
     public DbSet<CustomerLedgerEntryEntity> CustomerLedgerEntries => Set<CustomerLedgerEntryEntity>();
     public DbSet<CustomerCollectionEntity> CustomerCollections => Set<CustomerCollectionEntity>();
     public DbSet<CustomerCollectionAllocationEntity> CustomerCollectionAllocations => Set<CustomerCollectionAllocationEntity>();
+    public DbSet<SupplierEntity> Suppliers => Set<SupplierEntity>();
+    public DbSet<SupplierLedgerEntryEntity> SupplierLedgerEntries => Set<SupplierLedgerEntryEntity>();
+    public DbSet<PurchaseOrderEntity> PurchaseOrders => Set<PurchaseOrderEntity>();
+    public DbSet<PurchaseOrderItemEntity> PurchaseOrderItems => Set<PurchaseOrderItemEntity>();
+    public DbSet<GoodsReceiptEntity> GoodsReceipts => Set<GoodsReceiptEntity>();
+    public DbSet<GoodsReceiptItemEntity> GoodsReceiptItems => Set<GoodsReceiptItemEntity>();
+    public DbSet<GoodsReceiptExpenseEntity> GoodsReceiptExpenses => Set<GoodsReceiptExpenseEntity>();
+    public DbSet<PurchasePaymentEntity> PurchasePayments => Set<PurchasePaymentEntity>();
+    public DbSet<SupplierPaymentEntity> SupplierPayments => Set<SupplierPaymentEntity>();
+    public DbSet<SupplierPaymentAllocationEntity> SupplierPaymentAllocations => Set<SupplierPaymentAllocationEntity>();
+    public DbSet<PurchaseReturnEntity> PurchaseReturns => Set<PurchaseReturnEntity>();
+    public DbSet<PurchaseReturnItemEntity> PurchaseReturnItems => Set<PurchaseReturnItemEntity>();
     public DbSet<ProductEntity> Products => Set<ProductEntity>();
     public DbSet<ProductUnitEntity> ProductUnits => Set<ProductUnitEntity>();
     public DbSet<ProductBarcodeEntity> ProductBarcodes => Set<ProductBarcodeEntity>();
@@ -138,6 +150,136 @@ public sealed class PosDbContext(DbContextOptions<PosDbContext> options) : DbCon
         collectionAllocation.HasKey(x => x.Id);
         collectionAllocation.Property(x => x.Amount).HasPrecision(18, 2);
         collectionAllocation.HasIndex(x => new { x.CustomerCollectionId, x.SaleId }).IsUnique();
+
+
+        var supplier = modelBuilder.Entity<SupplierEntity>();
+        supplier.ToTable("suppliers");
+        supplier.HasKey(x => x.Id);
+        supplier.Property(x => x.Name).HasMaxLength(180).IsRequired();
+        supplier.Property(x => x.ContactPerson).HasMaxLength(160);
+        supplier.Property(x => x.Phone).HasMaxLength(50);
+        supplier.Property(x => x.AlternatePhone).HasMaxLength(50);
+        supplier.Property(x => x.OpeningBalance).HasPrecision(18, 2);
+        supplier.Property(x => x.CurrentBalance).HasPrecision(18, 2);
+        supplier.HasIndex(x => x.Name);
+
+        var supplierLedger = modelBuilder.Entity<SupplierLedgerEntryEntity>();
+        supplierLedger.ToTable("supplier_ledger_entries");
+        supplierLedger.HasKey(x => x.Id);
+        supplierLedger.Property(x => x.EntryType).HasMaxLength(50).IsRequired();
+        supplierLedger.Property(x => x.Debit).HasPrecision(18, 2);
+        supplierLedger.Property(x => x.Credit).HasPrecision(18, 2);
+        supplierLedger.Property(x => x.BalanceAfter).HasPrecision(18, 2);
+        supplierLedger.HasIndex(x => new { x.SupplierId, x.EntryType, x.ReferenceType, x.ReferenceId }).IsUnique();
+        supplierLedger.HasIndex(x => new { x.SupplierId, x.Id });
+
+        var purchaseOrder = modelBuilder.Entity<PurchaseOrderEntity>();
+        purchaseOrder.ToTable("purchase_orders");
+        purchaseOrder.HasKey(x => x.Id);
+        purchaseOrder.Property(x => x.Number).HasMaxLength(40).IsRequired();
+        purchaseOrder.HasIndex(x => x.Number).IsUnique();
+        purchaseOrder.Property(x => x.Status).HasMaxLength(30).IsRequired();
+        purchaseOrder.Property(x => x.Subtotal).HasPrecision(18, 2);
+        purchaseOrder.Property(x => x.LineDiscountTotal).HasPrecision(18, 2);
+        purchaseOrder.Property(x => x.OrderDiscountAmount).HasPrecision(18, 2);
+        purchaseOrder.Property(x => x.NetTotal).HasPrecision(18, 2);
+        purchaseOrder.HasMany(x => x.Items).WithOne().HasForeignKey(x => x.PurchaseOrderId).OnDelete(DeleteBehavior.Cascade);
+        purchaseOrder.HasIndex(x => new { x.SupplierId, x.Id });
+
+        var purchaseOrderItem = modelBuilder.Entity<PurchaseOrderItemEntity>();
+        purchaseOrderItem.ToTable("purchase_order_items");
+        purchaseOrderItem.HasKey(x => x.Id);
+        purchaseOrderItem.Property(x => x.OrderedQuantity).HasPrecision(20, 6);
+        purchaseOrderItem.Property(x => x.ReceivedQuantity).HasPrecision(20, 6);
+        purchaseOrderItem.Property(x => x.UnitCost).HasPrecision(18, 4);
+        purchaseOrderItem.Property(x => x.LineSubtotal).HasPrecision(18, 2);
+        purchaseOrderItem.Property(x => x.LineDiscountAmount).HasPrecision(18, 2);
+        purchaseOrderItem.Property(x => x.LineNetTotal).HasPrecision(18, 2);
+
+        var goodsReceipt = modelBuilder.Entity<GoodsReceiptEntity>();
+        goodsReceipt.ToTable("goods_receipts");
+        goodsReceipt.HasKey(x => x.Id);
+        goodsReceipt.Property(x => x.Number).HasMaxLength(40).IsRequired();
+        goodsReceipt.HasIndex(x => x.Number).IsUnique();
+        goodsReceipt.Property(x => x.IdempotencyKey).HasMaxLength(64).IsRequired();
+        goodsReceipt.HasIndex(x => x.IdempotencyKey).IsUnique();
+        goodsReceipt.Property(x => x.Status).HasMaxLength(30).IsRequired();
+        goodsReceipt.Property(x => x.Subtotal).HasPrecision(18, 2);
+        goodsReceipt.Property(x => x.LineDiscountTotal).HasPrecision(18, 2);
+        goodsReceipt.Property(x => x.ReceiptDiscountAmount).HasPrecision(18, 2);
+        goodsReceipt.Property(x => x.ExpenseTotal).HasPrecision(18, 2);
+        goodsReceipt.Property(x => x.NetTotal).HasPrecision(18, 2);
+        goodsReceipt.Property(x => x.PaidAmount).HasPrecision(18, 2);
+        goodsReceipt.Property(x => x.BalanceDue).HasPrecision(18, 2);
+        goodsReceipt.Property(x => x.ReturnedTotal).HasPrecision(18, 2);
+        goodsReceipt.HasMany(x => x.Items).WithOne().HasForeignKey(x => x.GoodsReceiptId).OnDelete(DeleteBehavior.Cascade);
+        goodsReceipt.HasMany(x => x.Expenses).WithOne().HasForeignKey(x => x.GoodsReceiptId).OnDelete(DeleteBehavior.Cascade);
+        goodsReceipt.HasMany(x => x.Payments).WithOne().HasForeignKey(x => x.GoodsReceiptId).OnDelete(DeleteBehavior.Cascade);
+        goodsReceipt.HasIndex(x => new { x.SupplierId, x.Id });
+
+        var goodsReceiptItem = modelBuilder.Entity<GoodsReceiptItemEntity>();
+        goodsReceiptItem.ToTable("goods_receipt_items");
+        goodsReceiptItem.HasKey(x => x.Id);
+        goodsReceiptItem.Property(x => x.Quantity).HasPrecision(20, 6);
+        goodsReceiptItem.Property(x => x.ConversionFactor).HasPrecision(20, 6);
+        goodsReceiptItem.Property(x => x.QuantityBase).HasPrecision(20, 6);
+        goodsReceiptItem.Property(x => x.SourceUnitCost).HasPrecision(18, 4);
+        goodsReceiptItem.Property(x => x.LineSubtotal).HasPrecision(18, 2);
+        goodsReceiptItem.Property(x => x.LineDiscountAmount).HasPrecision(18, 2);
+        goodsReceiptItem.Property(x => x.AllocatedReceiptDiscount).HasPrecision(18, 2);
+        goodsReceiptItem.Property(x => x.AllocatedExpense).HasPrecision(18, 2);
+        goodsReceiptItem.Property(x => x.LandedTotal).HasPrecision(18, 2);
+        goodsReceiptItem.Property(x => x.SourceUnitLandedCost).HasPrecision(18, 4);
+        goodsReceiptItem.Property(x => x.BaseUnitLandedCost).HasPrecision(18, 4);
+        goodsReceiptItem.HasIndex(x => x.StockMovementId);
+
+        var goodsReceiptExpense = modelBuilder.Entity<GoodsReceiptExpenseEntity>();
+        goodsReceiptExpense.ToTable("goods_receipt_expenses");
+        goodsReceiptExpense.HasKey(x => x.Id);
+        goodsReceiptExpense.Property(x => x.Type).HasMaxLength(30).IsRequired();
+        goodsReceiptExpense.Property(x => x.Amount).HasPrecision(18, 2);
+
+        var purchasePayment = modelBuilder.Entity<PurchasePaymentEntity>();
+        purchasePayment.ToTable("purchase_payments");
+        purchasePayment.HasKey(x => x.Id);
+        purchasePayment.Property(x => x.Amount).HasPrecision(18, 2);
+        purchasePayment.Property(x => x.MethodCode).HasMaxLength(30).IsRequired();
+
+        var supplierPayment = modelBuilder.Entity<SupplierPaymentEntity>();
+        supplierPayment.ToTable("supplier_payments");
+        supplierPayment.HasKey(x => x.Id);
+        supplierPayment.Property(x => x.Number).HasMaxLength(40).IsRequired();
+        supplierPayment.HasIndex(x => x.Number).IsUnique();
+        supplierPayment.Property(x => x.IdempotencyKey).HasMaxLength(64).IsRequired();
+        supplierPayment.HasIndex(x => x.IdempotencyKey).IsUnique();
+        supplierPayment.Property(x => x.Amount).HasPrecision(18, 2);
+        supplierPayment.Property(x => x.MethodCode).HasMaxLength(30).IsRequired();
+        supplierPayment.HasMany(x => x.Allocations).WithOne().HasForeignKey(x => x.SupplierPaymentId).OnDelete(DeleteBehavior.Cascade);
+
+        var supplierPaymentAllocation = modelBuilder.Entity<SupplierPaymentAllocationEntity>();
+        supplierPaymentAllocation.ToTable("supplier_payment_allocations");
+        supplierPaymentAllocation.HasKey(x => x.Id);
+        supplierPaymentAllocation.Property(x => x.Amount).HasPrecision(18, 2);
+        supplierPaymentAllocation.HasIndex(x => new { x.SupplierPaymentId, x.GoodsReceiptId }).IsUnique();
+
+        var purchaseReturn = modelBuilder.Entity<PurchaseReturnEntity>();
+        purchaseReturn.ToTable("purchase_returns");
+        purchaseReturn.HasKey(x => x.Id);
+        purchaseReturn.Property(x => x.Number).HasMaxLength(40).IsRequired();
+        purchaseReturn.HasIndex(x => x.Number).IsUnique();
+        purchaseReturn.Property(x => x.IdempotencyKey).HasMaxLength(64).IsRequired();
+        purchaseReturn.HasIndex(x => x.IdempotencyKey).IsUnique();
+        purchaseReturn.Property(x => x.ReturnTotal).HasPrecision(18, 2);
+        purchaseReturn.HasMany(x => x.Items).WithOne().HasForeignKey(x => x.PurchaseReturnId).OnDelete(DeleteBehavior.Cascade);
+
+        var purchaseReturnItem = modelBuilder.Entity<PurchaseReturnItemEntity>();
+        purchaseReturnItem.ToTable("purchase_return_items");
+        purchaseReturnItem.HasKey(x => x.Id);
+        purchaseReturnItem.Property(x => x.Quantity).HasPrecision(20, 6);
+        purchaseReturnItem.Property(x => x.QuantityBase).HasPrecision(20, 6);
+        purchaseReturnItem.Property(x => x.ReturnAmount).HasPrecision(18, 2);
+        purchaseReturnItem.Property(x => x.UnitCostBase).HasPrecision(18, 4);
+        purchaseReturnItem.Property(x => x.CostAmount).HasPrecision(18, 4);
 
         var product = modelBuilder.Entity<ProductEntity>();
         product.ToTable("products");

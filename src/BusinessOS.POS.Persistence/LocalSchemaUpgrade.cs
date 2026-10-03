@@ -469,6 +469,208 @@ WHERE IdempotencyKey IS NOT NULL;
 CREATE INDEX IF NOT EXISTS IX_stock_movements_SaleItemId ON stock_movements (SaleItemId);
 """, cancellationToken);
 
+
+        const string purchasingSql = """
+CREATE TABLE IF NOT EXISTS suppliers (
+    Id INTEGER NOT NULL CONSTRAINT PK_suppliers PRIMARY KEY AUTOINCREMENT,
+    Name TEXT NOT NULL,
+    ContactPerson TEXT NULL,
+    Phone TEXT NULL,
+    AlternatePhone TEXT NULL,
+    Address TEXT NULL,
+    OpeningBalance TEXT NOT NULL DEFAULT '0',
+    CurrentBalance TEXT NOT NULL DEFAULT '0',
+    Notes TEXT NULL,
+    IsActive INTEGER NOT NULL DEFAULT 1
+);
+CREATE INDEX IF NOT EXISTS IX_suppliers_Name ON suppliers (Name);
+
+CREATE TABLE IF NOT EXISTS supplier_ledger_entries (
+    Id INTEGER NOT NULL CONSTRAINT PK_supplier_ledger_entries PRIMARY KEY AUTOINCREMENT,
+    SupplierId INTEGER NOT NULL,
+    ActorUserId INTEGER NULL,
+    EntryType TEXT NOT NULL,
+    Debit TEXT NOT NULL DEFAULT '0',
+    Credit TEXT NOT NULL DEFAULT '0',
+    BalanceAfter TEXT NOT NULL,
+    ReferenceType TEXT NOT NULL,
+    ReferenceId INTEGER NOT NULL,
+    ReferenceNumber TEXT NULL,
+    OccurredAt TEXT NOT NULL,
+    Notes TEXT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_supplier_ledger_unique
+ON supplier_ledger_entries (SupplierId, EntryType, ReferenceType, ReferenceId);
+CREATE INDEX IF NOT EXISTS IX_supplier_ledger_supplier_id
+ON supplier_ledger_entries (SupplierId, Id);
+
+CREATE TABLE IF NOT EXISTS purchase_orders (
+    Id INTEGER NOT NULL CONSTRAINT PK_purchase_orders PRIMARY KEY AUTOINCREMENT,
+    Number TEXT NOT NULL,
+    SupplierId INTEGER NOT NULL,
+    CreatedByUserId INTEGER NOT NULL,
+    ApprovedByUserId INTEGER NULL,
+    Status TEXT NOT NULL,
+    OrderDate TEXT NOT NULL,
+    ExpectedDate TEXT NULL,
+    SupplierReference TEXT NULL,
+    Subtotal TEXT NOT NULL,
+    LineDiscountTotal TEXT NOT NULL,
+    OrderDiscountAmount TEXT NOT NULL,
+    NetTotal TEXT NOT NULL,
+    CreatedAt TEXT NOT NULL,
+    ApprovedAt TEXT NULL,
+    CancelledAt TEXT NULL,
+    Notes TEXT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_purchase_orders_Number ON purchase_orders (Number);
+CREATE INDEX IF NOT EXISTS IX_purchase_orders_supplier_id ON purchase_orders (SupplierId, Id);
+
+CREATE TABLE IF NOT EXISTS purchase_order_items (
+    Id INTEGER NOT NULL CONSTRAINT PK_purchase_order_items PRIMARY KEY AUTOINCREMENT,
+    PurchaseOrderId INTEGER NOT NULL,
+    ProductId INTEGER NOT NULL,
+    ProductUnitId INTEGER NOT NULL,
+    OrderedQuantity TEXT NOT NULL,
+    ReceivedQuantity TEXT NOT NULL DEFAULT '0',
+    UnitCost TEXT NOT NULL,
+    LineSubtotal TEXT NOT NULL,
+    LineDiscountAmount TEXT NOT NULL,
+    LineNetTotal TEXT NOT NULL,
+    Notes TEXT NULL,
+    CONSTRAINT FK_purchase_order_items_orders FOREIGN KEY (PurchaseOrderId) REFERENCES purchase_orders (Id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS goods_receipts (
+    Id INTEGER NOT NULL CONSTRAINT PK_goods_receipts PRIMARY KEY AUTOINCREMENT,
+    Number TEXT NOT NULL,
+    IdempotencyKey TEXT NOT NULL,
+    SupplierId INTEGER NOT NULL,
+    PurchaseOrderId INTEGER NULL,
+    CreatedByUserId INTEGER NOT NULL,
+    PostedByUserId INTEGER NOT NULL,
+    Status TEXT NOT NULL,
+    SupplierInvoiceReference TEXT NULL,
+    ReceivedAt TEXT NOT NULL,
+    Subtotal TEXT NOT NULL,
+    LineDiscountTotal TEXT NOT NULL,
+    ReceiptDiscountAmount TEXT NOT NULL,
+    ExpenseTotal TEXT NOT NULL,
+    NetTotal TEXT NOT NULL,
+    PaidAmount TEXT NOT NULL,
+    BalanceDue TEXT NOT NULL,
+    ReturnedTotal TEXT NOT NULL DEFAULT '0',
+    PostedAt TEXT NOT NULL,
+    Notes TEXT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_goods_receipts_Number ON goods_receipts (Number);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_goods_receipts_IdempotencyKey ON goods_receipts (IdempotencyKey);
+CREATE INDEX IF NOT EXISTS IX_goods_receipts_supplier_id ON goods_receipts (SupplierId, Id);
+
+CREATE TABLE IF NOT EXISTS goods_receipt_items (
+    Id INTEGER NOT NULL CONSTRAINT PK_goods_receipt_items PRIMARY KEY AUTOINCREMENT,
+    GoodsReceiptId INTEGER NOT NULL,
+    PurchaseOrderItemId INTEGER NULL,
+    ProductId INTEGER NOT NULL,
+    ProductUnitId INTEGER NOT NULL,
+    Quantity TEXT NOT NULL,
+    ConversionFactor TEXT NOT NULL,
+    QuantityBase TEXT NOT NULL,
+    SourceUnitCost TEXT NOT NULL,
+    LineSubtotal TEXT NOT NULL,
+    LineDiscountAmount TEXT NOT NULL,
+    AllocatedReceiptDiscount TEXT NOT NULL,
+    AllocatedExpense TEXT NOT NULL,
+    LandedTotal TEXT NOT NULL,
+    SourceUnitLandedCost TEXT NOT NULL,
+    BaseUnitLandedCost TEXT NOT NULL,
+    BatchNumber TEXT NULL,
+    ManufacturedAt TEXT NULL,
+    ExpiresAt TEXT NULL,
+    ProductBatchId INTEGER NULL,
+    StockMovementId INTEGER NULL,
+    InventoryCostLayerId INTEGER NULL,
+    CONSTRAINT FK_goods_receipt_items_receipts FOREIGN KEY (GoodsReceiptId) REFERENCES goods_receipts (Id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS IX_goods_receipt_items_StockMovementId ON goods_receipt_items (StockMovementId);
+
+CREATE TABLE IF NOT EXISTS goods_receipt_expenses (
+    Id INTEGER NOT NULL CONSTRAINT PK_goods_receipt_expenses PRIMARY KEY AUTOINCREMENT,
+    GoodsReceiptId INTEGER NOT NULL,
+    Type TEXT NOT NULL,
+    Description TEXT NULL,
+    Amount TEXT NOT NULL,
+    CONSTRAINT FK_goods_receipt_expenses_receipts FOREIGN KEY (GoodsReceiptId) REFERENCES goods_receipts (Id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS purchase_payments (
+    Id INTEGER NOT NULL CONSTRAINT PK_purchase_payments PRIMARY KEY AUTOINCREMENT,
+    GoodsReceiptId INTEGER NOT NULL,
+    SupplierId INTEGER NOT NULL,
+    RecordedByUserId INTEGER NOT NULL,
+    Amount TEXT NOT NULL,
+    MethodCode TEXT NOT NULL,
+    Reference TEXT NULL,
+    PaidAt TEXT NOT NULL,
+    Notes TEXT NULL,
+    CONSTRAINT FK_purchase_payments_receipts FOREIGN KEY (GoodsReceiptId) REFERENCES goods_receipts (Id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS supplier_payments (
+    Id INTEGER NOT NULL CONSTRAINT PK_supplier_payments PRIMARY KEY AUTOINCREMENT,
+    Number TEXT NOT NULL,
+    IdempotencyKey TEXT NOT NULL,
+    SupplierId INTEGER NOT NULL,
+    RecordedByUserId INTEGER NOT NULL,
+    Amount TEXT NOT NULL,
+    MethodCode TEXT NOT NULL,
+    Reference TEXT NULL,
+    PaidAt TEXT NOT NULL,
+    Notes TEXT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_supplier_payments_Number ON supplier_payments (Number);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_supplier_payments_IdempotencyKey ON supplier_payments (IdempotencyKey);
+
+CREATE TABLE IF NOT EXISTS supplier_payment_allocations (
+    Id INTEGER NOT NULL CONSTRAINT PK_supplier_payment_allocations PRIMARY KEY AUTOINCREMENT,
+    SupplierPaymentId INTEGER NOT NULL,
+    GoodsReceiptId INTEGER NOT NULL,
+    Amount TEXT NOT NULL,
+    CONSTRAINT FK_supplier_payment_allocations_payments FOREIGN KEY (SupplierPaymentId) REFERENCES supplier_payments (Id) ON DELETE CASCADE
+);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_supplier_payment_allocations_unique
+ON supplier_payment_allocations (SupplierPaymentId, GoodsReceiptId);
+
+CREATE TABLE IF NOT EXISTS purchase_returns (
+    Id INTEGER NOT NULL CONSTRAINT PK_purchase_returns PRIMARY KEY AUTOINCREMENT,
+    Number TEXT NOT NULL,
+    IdempotencyKey TEXT NOT NULL,
+    GoodsReceiptId INTEGER NOT NULL,
+    SupplierId INTEGER NOT NULL,
+    CreatedByUserId INTEGER NOT NULL,
+    Reason TEXT NOT NULL,
+    ReturnTotal TEXT NOT NULL,
+    PostedAt TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_purchase_returns_Number ON purchase_returns (Number);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_purchase_returns_IdempotencyKey ON purchase_returns (IdempotencyKey);
+
+CREATE TABLE IF NOT EXISTS purchase_return_items (
+    Id INTEGER NOT NULL CONSTRAINT PK_purchase_return_items PRIMARY KEY AUTOINCREMENT,
+    PurchaseReturnId INTEGER NOT NULL,
+    GoodsReceiptItemId INTEGER NOT NULL,
+    InventoryCostLayerId INTEGER NOT NULL,
+    StockMovementId INTEGER NOT NULL,
+    Quantity TEXT NOT NULL,
+    QuantityBase TEXT NOT NULL,
+    ReturnAmount TEXT NOT NULL,
+    UnitCostBase TEXT NOT NULL,
+    CostAmount TEXT NOT NULL,
+    CONSTRAINT FK_purchase_return_items_returns FOREIGN KEY (PurchaseReturnId) REFERENCES purchase_returns (Id) ON DELETE CASCADE
+);
+""";
+        await context.Database.ExecuteSqlRawAsync(purchasingSql, cancellationToken);
+
         await context.Database.ExecuteSqlRawAsync("""
 UPDATE sales
 SET BalanceDue = CASE

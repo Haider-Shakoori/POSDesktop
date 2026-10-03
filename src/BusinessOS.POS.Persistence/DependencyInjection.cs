@@ -3,6 +3,7 @@ using BusinessOS.POS.Application.Abstractions.Catalog;
 using BusinessOS.POS.Application.Abstractions.Customers;
 using BusinessOS.POS.Application.Abstractions.Inventory;
 using BusinessOS.POS.Application.Abstractions.Persistence;
+using BusinessOS.POS.Application.Abstractions.Purchasing;
 using BusinessOS.POS.Application.Abstractions.Sales;
 using BusinessOS.POS.Application.Abstractions.Storage;
 using BusinessOS.POS.Persistence.Security;
@@ -46,6 +47,7 @@ public static class DependencyInjection
         services.AddSingleton<ICustomerService, LocalCustomerService>();
         services.AddSingleton<IProductCatalogService, LocalProductCatalogService>();
         services.AddSingleton<IInventoryService, LocalInventoryService>();
+        services.AddSingleton<IPurchasingService, LocalPurchasingService>();
 
         return services;
     }

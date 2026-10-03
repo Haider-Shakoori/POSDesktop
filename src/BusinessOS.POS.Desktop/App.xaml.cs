@@ -8,6 +8,7 @@ using BusinessOS.POS.Desktop.Inventory;
 using BusinessOS.POS.Desktop.Customers;
 using BusinessOS.POS.Desktop.Sales;
 using BusinessOS.POS.Desktop.Pos;
+using BusinessOS.POS.Desktop.Purchasing;
 using BusinessOS.POS.Infrastructure;
 using BusinessOS.POS.Persistence;
 using Microsoft.Extensions.DependencyInjection;
@@ -38,6 +39,7 @@ public partial class App : System.Windows.Application
                     services.AddTransient<InventoryViewModel>();
                     services.AddTransient<SalesViewModel>();
                     services.AddTransient<CustomersViewModel>();
+                    services.AddTransient<PurchasingViewModel>();
                     services.AddSingleton<IReceiptPrintService, WpfReceiptPrintService>();
                     services.AddTransient<MainWindowViewModel>();
                 })
