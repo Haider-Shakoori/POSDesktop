@@ -45,6 +45,8 @@ public sealed class PosDbContext(DbContextOptions<PosDbContext> options) : DbCon
     public DbSet<CashierShiftClosureEntity> CashierShiftClosures => Set<CashierShiftClosureEntity>();
     public DbSet<ExpenseCategoryEntity> ExpenseCategories => Set<ExpenseCategoryEntity>();
     public DbSet<OperatingEntryEntity> OperatingEntries => Set<OperatingEntryEntity>();
+    public DbSet<BusinessDayEntity> BusinessDays => Set<BusinessDayEntity>();
+    public DbSet<BusinessDayClosureEntity> BusinessDayClosures => Set<BusinessDayClosureEntity>();
     public DbSet<DocumentSequenceEntity> DocumentSequences => Set<DocumentSequenceEntity>();
     public DbSet<SaleEntity> Sales => Set<SaleEntity>();
     public DbSet<SaleItemEntity> SaleItems => Set<SaleItemEntity>();
@@ -431,6 +433,44 @@ public sealed class PosDbContext(DbContextOptions<PosDbContext> options) : DbCon
         shiftClosure.Property(x => x.Variance).HasPrecision(18, 2);
         shiftClosure.Property(x => x.Tolerance).HasPrecision(18, 2);
         shiftClosure.HasIndex(x => new { x.CashierShiftId, x.Version }).IsUnique();
+
+        var businessDay = modelBuilder.Entity<BusinessDayEntity>();
+        businessDay.ToTable("business_days");
+        businessDay.HasKey(x => x.Id);
+        businessDay.Property(x => x.Status).HasMaxLength(20).IsRequired();
+        businessDay.HasIndex(x => x.BusinessDate).IsUnique();
+
+        var businessDayClosure = modelBuilder.Entity<BusinessDayClosureEntity>();
+        businessDayClosure.ToTable("business_day_closures");
+        businessDayClosure.HasKey(x => x.Id);
+        businessDayClosure.Property(x => x.IdempotencyKey).HasMaxLength(64).IsRequired();
+        businessDayClosure.HasIndex(x => x.IdempotencyKey).IsUnique();
+        businessDayClosure.Property(x => x.Number).HasMaxLength(40).IsRequired();
+        businessDayClosure.HasIndex(x => x.Number).IsUnique();
+        businessDayClosure.HasIndex(x => new { x.BusinessDayId, x.Version }).IsUnique();
+        businessDayClosure.Property(x => x.SalesSubtotal).HasPrecision(18, 2);
+        businessDayClosure.Property(x => x.SalesLineDiscountTotal).HasPrecision(18, 2);
+        businessDayClosure.Property(x => x.SalesDiscountTotal).HasPrecision(18, 2);
+        businessDayClosure.Property(x => x.SalesNetTotal).HasPrecision(18, 2);
+        businessDayClosure.Property(x => x.SalesReturnTotal).HasPrecision(18, 2);
+        businessDayClosure.Property(x => x.NetSalesTotal).HasPrecision(18, 2);
+        businessDayClosure.Property(x => x.SalesCogsTotal).HasPrecision(18, 2);
+        businessDayClosure.Property(x => x.CogsReversedTotal).HasPrecision(18, 2);
+        businessDayClosure.Property(x => x.NetCogsTotal).HasPrecision(18, 2);
+        businessDayClosure.Property(x => x.GrossProfitTotal).HasPrecision(18, 2);
+        businessDayClosure.Property(x => x.CustomerCollectionsTotal).HasPrecision(18, 2);
+        businessDayClosure.Property(x => x.PurchasesTotal).HasPrecision(18, 2);
+        businessDayClosure.Property(x => x.PurchaseReturnsTotal).HasPrecision(18, 2);
+        businessDayClosure.Property(x => x.SupplierPaymentsTotal).HasPrecision(18, 2);
+        businessDayClosure.Property(x => x.OperatingExpensesTotal).HasPrecision(18, 2);
+        businessDayClosure.Property(x => x.OtherIncomeTotal).HasPrecision(18, 2);
+        businessDayClosure.Property(x => x.NetProfitTotal).HasPrecision(18, 2);
+        businessDayClosure.Property(x => x.OpeningCashTotal).HasPrecision(18, 2);
+        businessDayClosure.Property(x => x.CashInflowTotal).HasPrecision(18, 2);
+        businessDayClosure.Property(x => x.CashOutflowTotal).HasPrecision(18, 2);
+        businessDayClosure.Property(x => x.ExpectedCashTotal).HasPrecision(18, 2);
+        businessDayClosure.Property(x => x.ActualCashTotal).HasPrecision(18, 2);
+        businessDayClosure.Property(x => x.VarianceTotal).HasPrecision(18, 2);
 
         var expenseCategory = modelBuilder.Entity<ExpenseCategoryEntity>();
         expenseCategory.ToTable("expense_categories");

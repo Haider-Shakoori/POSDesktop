@@ -1,6 +1,7 @@
 using BusinessOS.POS.Application.Abstractions.Authentication;
 using BusinessOS.POS.Application.Abstractions.Catalog;
 using BusinessOS.POS.Application.Abstractions.Cash;
+using BusinessOS.POS.Application.Abstractions.Closing;
 using BusinessOS.POS.Application.Abstractions.Customers;
 using BusinessOS.POS.Application.Abstractions.Inventory;
 using BusinessOS.POS.Application.Abstractions.Persistence;
@@ -49,6 +50,7 @@ public static class DependencyInjection
         services.AddSingleton<IProductCatalogService, LocalProductCatalogService>();
         services.AddSingleton<IInventoryService, LocalInventoryService>();
         services.AddSingleton<ICashManagementService, LocalCashManagementService>();
+        services.AddSingleton<IBusinessDayClosingService, LocalBusinessDayClosingService>();
         services.AddSingleton<IPurchasingService, LocalPurchasingService>();
 
         return services;

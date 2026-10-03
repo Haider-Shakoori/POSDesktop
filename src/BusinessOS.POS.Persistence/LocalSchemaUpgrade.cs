@@ -922,6 +922,70 @@ SET ExpectedCash = COALESCE((
 ), OpeningCash);
 """, cancellationToken);
 
+        const string closingSql = """
+CREATE TABLE IF NOT EXISTS business_days (
+    Id INTEGER NOT NULL CONSTRAINT PK_business_days PRIMARY KEY AUTOINCREMENT,
+    BusinessDate TEXT NOT NULL,
+    Status TEXT NOT NULL DEFAULT 'open',
+    ClosedAt TEXT NULL,
+    ClosedByUserId INTEGER NULL,
+    ReopenedAt TEXT NULL,
+    ReopenedByUserId INTEGER NULL,
+    ReopenReason TEXT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_business_days_BusinessDate ON business_days (BusinessDate);
+
+CREATE TABLE IF NOT EXISTS business_day_closures (
+    Id INTEGER NOT NULL CONSTRAINT PK_business_day_closures PRIMARY KEY AUTOINCREMENT,
+    BusinessDayId INTEGER NOT NULL,
+    IdempotencyKey TEXT NOT NULL,
+    Number TEXT NOT NULL,
+    Version INTEGER NOT NULL,
+    ClosedByUserId INTEGER NOT NULL,
+    ShiftCount INTEGER NOT NULL,
+    SalesCount INTEGER NOT NULL,
+    SalesSubtotal TEXT NOT NULL,
+    SalesLineDiscountTotal TEXT NOT NULL,
+    SalesDiscountTotal TEXT NOT NULL,
+    SalesNetTotal TEXT NOT NULL,
+    SalesReturnTotal TEXT NOT NULL,
+    NetSalesTotal TEXT NOT NULL,
+    SalesCogsTotal TEXT NOT NULL,
+    CogsReversedTotal TEXT NOT NULL,
+    NetCogsTotal TEXT NOT NULL,
+    GrossProfitTotal TEXT NOT NULL,
+    CustomerCollectionsTotal TEXT NOT NULL,
+    PurchasesTotal TEXT NOT NULL,
+    PurchaseReturnsTotal TEXT NOT NULL,
+    SupplierPaymentsTotal TEXT NOT NULL,
+    OperatingExpensesTotal TEXT NOT NULL,
+    OtherIncomeTotal TEXT NOT NULL,
+    NetProfitTotal TEXT NOT NULL,
+    OpeningCashTotal TEXT NOT NULL,
+    CashInflowTotal TEXT NOT NULL,
+    CashOutflowTotal TEXT NOT NULL,
+    ExpectedCashTotal TEXT NOT NULL,
+    ActualCashTotal TEXT NOT NULL,
+    VarianceTotal TEXT NOT NULL,
+    CashBreakdownJson TEXT NULL,
+    Notes TEXT NULL,
+    ClosedAt TEXT NOT NULL,
+    CreatedAt TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_business_day_closures_IdempotencyKey
+ON business_day_closures (IdempotencyKey);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_business_day_closures_Number
+ON business_day_closures (Number);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_business_day_closures_day_version
+ON business_day_closures (BusinessDayId, Version);
+
+INSERT OR IGNORE INTO business_days (BusinessDate, Status)
+SELECT DISTINCT BusinessDate, 'open'
+FROM cashier_shifts
+WHERE BusinessDate IS NOT NULL;
+""";
+        await context.Database.ExecuteSqlRawAsync(closingSql, cancellationToken);
+
         await context.Database.ExecuteSqlRawAsync("""
 UPDATE sales
 SET BalanceDue = CASE
