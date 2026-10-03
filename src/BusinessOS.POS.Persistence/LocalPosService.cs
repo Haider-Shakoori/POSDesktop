@@ -32,6 +32,14 @@ public sealed class LocalPosService(
             Localize(x.NameEn, x.NameFa, x.NamePs, language),
             x.IsCash)).ToList();
 
+        var customers = await context.Customers.AsNoTracking()
+            .Where(x => x.IsActive)
+            .OrderBy(x => x.Name)
+            .Take(1000)
+            .Select(x => new PosCustomerOption(
+                x.Id, x.Name, x.Phone, x.CreditLimit, x.CurrentBalance))
+            .ToListAsync(cancellationToken);
+
         var shift = await context.CashierShifts
             .AsNoTracking()
             .Where(x => x.UserId == user.UserId && x.Status == "open")
@@ -40,6 +48,7 @@ public sealed class LocalPosService(
 
         return new PosReferenceData(
             payments,
+            customers,
             shift is null
                 ? new PosShiftState(false, null, 0m, null)
                 : new PosShiftState(true, shift.Id, shift.OpeningCash, shift.OpenedAt));
@@ -191,9 +200,9 @@ public sealed class LocalPosService(
             throw new InvalidOperationException("A sale requires between 1 and 200 items.");
         }
 
-        if (request.Payments.Count is < 1 or > 8)
+        if (request.Payments.Count > 8)
         {
-            throw new InvalidOperationException("At least one payment is required.");
+            throw new InvalidOperationException("A sale cannot contain more than eight payments.");
         }
 
         var user = RequireUser();
@@ -215,6 +224,16 @@ public sealed class LocalPosService(
 
             await transaction.CommitAsync(cancellationToken);
             return ToResult(existing);
+        }
+
+        CustomerEntity? customer = null;
+        if (request.CustomerId is not null)
+        {
+            customer = await context.Customers.SingleOrDefaultAsync(
+                x => x.Id == request.CustomerId.Value, cancellationToken)
+                ?? throw new InvalidOperationException("The selected customer is unavailable.");
+            if (!customer.IsActive)
+                throw new InvalidOperationException("The selected customer is inactive.");
         }
 
         var lineIds = request.Lines.Select(x => x.ProductUnitId).ToList();
@@ -369,9 +388,24 @@ public sealed class LocalPosService(
 
         appliedTotal = Money(appliedTotal);
         changeTotal = Money(changeTotal);
-        if (appliedTotal != netTotal)
+        if (appliedTotal > netTotal)
         {
-            throw new InvalidOperationException("Applied payments must exactly match the sale total.");
+            throw new InvalidOperationException("Applied payments cannot exceed the sale total.");
+        }
+
+        var balanceDue = Money(netTotal - appliedTotal);
+        if (balanceDue > 0m)
+        {
+            if (customer is null)
+                throw new InvalidOperationException("A registered customer is required when a sale leaves a balance due.");
+
+            authorizer.Demand("sales.credit");
+            var projectedBalance = Money(customer.CurrentBalance + balanceDue);
+            if (projectedBalance > customer.CreditLimit &&
+                !authorizer.HasPermission("sales.override_credit_limit"))
+            {
+                throw new InvalidOperationException("The customer credit limit would be exceeded.");
+            }
         }
 
         CashierShiftEntity? shift = null;
@@ -396,17 +430,31 @@ public sealed class LocalPosService(
             RequestFingerprint = fingerprint,
             CashierUserId = user.UserId,
             CashierShiftId = shift?.Id,
+            CustomerId = customer?.Id,
+            CustomerNameSnapshot = customer?.Name ?? "Walk-in Customer",
             Subtotal = subtotal,
             LineDiscountTotal = lineDiscountTotal,
             SaleDiscountAmount = saleDiscount,
             NetTotal = netTotal,
             PaidAmount = appliedTotal,
             ChangeAmount = changeTotal,
+            BalanceDue = balanceDue,
+            PaymentStatus = balanceDue == 0m ? "paid" : (appliedTotal > 0m ? "partial" : "unpaid"),
+            SettlementFinalizedAt = soldAt,
             SoldAt = soldAt,
             Notes = request.Notes?.Trim(),
         };
         context.Sales.Add(sale);
         await context.SaveChangesAsync(cancellationToken);
+
+        if (customer is not null)
+        {
+            await CustomerLedgerWriter.DebitAsync(
+                context, customer, sale.NetTotal,
+                "sale", "sale", sale.Id, sale.Number,
+                user.UserId, "Sale receivable", cancellationToken);
+            await context.SaveChangesAsync(cancellationToken);
+        }
 
         decimal cogsTotal = 0m;
         foreach (var line in prepared)
@@ -415,22 +463,7 @@ public sealed class LocalPosService(
             var cogs = await ConsumeFifoAsync(context, product, line.QuantityBase, cancellationToken);
             cogsTotal += cogs;
 
-            if (product.TrackStock)
-            {
-                await DeductPhysicalStockAsync(
-                    context,
-                    product,
-                    line.ProductUnit,
-                    line.Quantity,
-                    line.QuantityBase,
-                    cogs,
-                    sale,
-                    user.UserId,
-                    soldAt,
-                    cancellationToken);
-            }
-
-            sale.Items.Add(new SaleItemEntity
+            var saleItem = new SaleItemEntity
             {
                 ProductId = product.Id,
                 ProductUnitId = line.ProductUnit.Id,
@@ -448,24 +481,58 @@ public sealed class LocalPosService(
                 LineNetTotal = line.NetTotal,
                 CogsAmount = cogs,
                 GrossProfit = Money(line.NetTotal - cogs),
-            });
+            };
+            sale.Items.Add(saleItem);
+            await context.SaveChangesAsync(cancellationToken);
+
+            if (product.TrackStock)
+            {
+                await DeductPhysicalStockAsync(
+                    context,
+                    product,
+                    line.ProductUnit,
+                    saleItem.Id,
+                    line.Quantity,
+                    line.QuantityBase,
+                    cogs,
+                    sale,
+                    user.UserId,
+                    soldAt,
+                    cancellationToken);
+            }
         }
 
         sale.CogsTotal = Money(cogsTotal);
         sale.GrossProfit = Money(sale.NetTotal - sale.CogsTotal);
 
-        foreach (var payment in preparedPayments)
+        for (var paymentIndex = 0; paymentIndex < preparedPayments.Count; paymentIndex++)
         {
-            sale.Payments.Add(new SalePaymentEntity
+            var payment = preparedPayments[paymentIndex];
+            var salePayment = new SalePaymentEntity
             {
+                CustomerId = customer?.Id,
+                RecordedByUserId = user.UserId,
+                IdempotencyKey = sale.IdempotencyKey + ":checkout:" + paymentIndex,
                 MethodCode = payment.MethodCode,
                 Amount = payment.AppliedAmount,
                 TenderedAmount = payment.TenderedAmount,
                 ChangeAmount = payment.ChangeAmount,
                 Reference = payment.Reference,
+                SourceType = "checkout",
+                SourceId = sale.Id,
                 Notes = payment.Notes,
                 PaidAt = soldAt,
-            });
+            };
+            sale.Payments.Add(salePayment);
+            await context.SaveChangesAsync(cancellationToken);
+
+            if (customer is not null)
+            {
+                await CustomerLedgerWriter.CreditAsync(
+                    context, customer, salePayment.Amount,
+                    "sale_payment", "sale_payment", salePayment.Id, sale.Number,
+                    user.UserId, "Payment applied at checkout", cancellationToken);
+            }
         }
 
         context.AuditLogs.Add(new AuditLogEntity
@@ -510,6 +577,14 @@ public sealed class LocalPosService(
             return ToHeldSummary(existing);
         }
 
+        CustomerEntity? heldCustomer = null;
+        if (request.CustomerId is not null)
+        {
+            heldCustomer = await context.Customers.AsNoTracking()
+                .SingleOrDefaultAsync(x => x.Id == request.CustomerId.Value && x.IsActive, cancellationToken)
+                ?? throw new InvalidOperationException("The selected customer is unavailable.");
+        }
+
         var ids = request.Lines.Select(x => x.ProductUnitId).Distinct().ToList();
         var units = await context.ProductUnits
             .Include(x => x.Product)
@@ -529,6 +604,8 @@ public sealed class LocalPosService(
             Number = await NextNumberAsync(context, "held_sale", "HLD", now, cancellationToken),
             IdempotencyKey = request.IdempotencyKey,
             CashierUserId = user.UserId,
+            CustomerId = heldCustomer?.Id,
+            CustomerNameSnapshot = heldCustomer?.Name ?? "Walk-in Customer",
             SaleDiscountAmount = Money(request.SaleDiscountAmount),
             Notes = request.Notes?.Trim(),
             HeldAt = now,
@@ -657,6 +734,8 @@ public sealed class LocalPosService(
             held.Number,
             held.SaleDiscountAmount,
             held.Notes,
+            held.CustomerId,
+            held.CustomerNameSnapshot,
             lines);
     }
 
@@ -758,7 +837,8 @@ public sealed class LocalPosService(
     private static string Fingerprint(PosCheckoutRequest request)
     {
         var builder = new StringBuilder();
-        builder.Append(Money(request.SaleDiscountAmount).ToString(CultureInfo.InvariantCulture)).Append('|');
+        builder.Append(request.CustomerId?.ToString(CultureInfo.InvariantCulture) ?? "walk-in").Append('|')
+            .Append(Money(request.SaleDiscountAmount).ToString(CultureInfo.InvariantCulture)).Append('|');
 
         foreach (var line in request.Lines.OrderBy(x => x.ProductUnitId))
         {
@@ -836,6 +916,7 @@ public sealed class LocalPosService(
         PosDbContext context,
         ProductEntity product,
         ProductUnitEntity productUnit,
+        long saleItemId,
         decimal sourceQuantity,
         decimal quantityBase,
         decimal cogs,
@@ -852,6 +933,7 @@ public sealed class LocalPosService(
             context.StockMovements.Add(new StockMovementEntity
             {
                 ProductId = product.Id,
+                SaleItemId = saleItemId,
                 SourceUnitId = productUnit.UnitId,
                 ActorUserId = actorUserId,
                 MovementType = "sale",
@@ -862,7 +944,7 @@ public sealed class LocalPosService(
                 UnitCostBase = averageCost,
                 ReferenceType = "sale",
                 ReferenceId = sale.Id,
-                IdempotencyKey = "sale:" + sale.Id + ":product:" + product.Id,
+                IdempotencyKey = "sale:" + sale.Id + ":item:" + saleItemId,
                 Notes = "Sale " + sale.Number,
                 OccurredAt = soldAt,
             });
@@ -908,6 +990,7 @@ public sealed class LocalPosService(
             {
                 ProductId = product.Id,
                 ProductBatchId = batch.Id,
+                SaleItemId = saleItemId,
                 ActorUserId = actorUserId,
                 MovementType = "sale",
                 QuantityBase = -take,
@@ -916,7 +999,7 @@ public sealed class LocalPosService(
                 UnitCostBase = averageCost,
                 ReferenceType = "sale",
                 ReferenceId = sale.Id,
-                IdempotencyKey = "sale:" + sale.Id + ":product:" + product.Id + ":batch:" + batch.Id,
+                IdempotencyKey = "sale:" + sale.Id + ":item:" + saleItemId + ":batch:" + batch.Id,
                 Notes = "Sale " + sale.Number + " · FEFO batch " + batch.BatchNumber,
                 OccurredAt = soldAt,
             });
@@ -989,7 +1072,10 @@ public sealed class LocalPosService(
     }
 
     private static PosCheckoutResult ToResult(SaleEntity sale) =>
-        new(sale.Id, sale.Number, sale.NetTotal, sale.PaidAmount, sale.ChangeAmount, sale.CogsTotal, sale.GrossProfit, sale.SoldAt);
+        new(
+            sale.Id, sale.Number, sale.NetTotal, sale.PaidAmount, sale.ChangeAmount,
+            sale.CogsTotal, sale.GrossProfit, sale.SoldAt, sale.BalanceDue,
+            sale.PaymentStatus, sale.CustomerNameSnapshot);
 
     private static PosHeldSaleSummary ToHeldSummary(HeldSaleEntity held)
     {
@@ -999,7 +1085,9 @@ public sealed class LocalPosService(
             held.Number,
             held.Items.Count,
             Money(Math.Max(0m, subtotal - held.SaleDiscountAmount)),
-            held.HeldAt);
+            held.HeldAt,
+            held.CustomerId,
+            held.CustomerNameSnapshot);
     }
 
     private sealed record PreparedPayment(
