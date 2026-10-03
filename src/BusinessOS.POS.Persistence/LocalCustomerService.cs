@@ -56,7 +56,7 @@ public sealed class LocalCustomerService(
 
         var outstanding = await context.Sales.AsNoTracking()
             .Where(x => x.CustomerId == customerId && x.BalanceDue > 0m)
-            .OrderBy(x => x.SoldAt).ThenBy(x => x.Id)
+            .OrderBy(x => x.Id)
             .ToListAsync(cancellationToken);
 
         var collections = await context.CustomerCollections.AsNoTracking()
@@ -239,7 +239,7 @@ public sealed class LocalCustomerService(
         var remaining = amount;
         var sales = await context.Sales
             .Where(x => x.CustomerId == customer.Id && x.BalanceDue > 0m)
-            .OrderBy(x => x.SoldAt).ThenBy(x => x.Id)
+            .OrderBy(x => x.Id)
             .ToListAsync(cancellationToken);
 
         foreach (var sale in sales)
