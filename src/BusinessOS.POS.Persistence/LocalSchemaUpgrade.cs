@@ -396,6 +396,8 @@ CREATE TABLE IF NOT EXISTS cash_movements (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS IX_cash_movements_IdempotencyKey ON cash_movements (IdempotencyKey);
 CREATE INDEX IF NOT EXISTS IX_cash_movements_shift_id ON cash_movements (CashierShiftId, Id);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_cash_movements_unique_source
+ON cash_movements (SourceType, SourceId, MovementType);
 
 CREATE TABLE IF NOT EXISTS cashier_shift_closures (
     Id INTEGER NOT NULL CONSTRAINT PK_cashier_shift_closures PRIMARY KEY AUTOINCREMENT,

@@ -18,7 +18,8 @@ internal static class CashLedgerEngine
         DateTimeOffset occurredAt,
         string idempotencyKey,
         long? shiftId = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        bool allowOtherUser = false)
     {
         amount = Money(amount);
         if (amount <= 0m) throw new InvalidOperationException("Cash movement amount must be greater than zero.");
@@ -33,7 +34,9 @@ internal static class CashLedgerEngine
                 existing.Direction != direction ||
                 existing.MovementType != movementType ||
                 existing.SourceType != sourceType ||
-                existing.SourceId != sourceId)
+                existing.SourceId != sourceId ||
+                (shiftId is not null && existing.CashierShiftId != shiftId.Value) ||
+                Clean(existing.Reason) != Clean(reason))
                 throw new InvalidOperationException("The cash movement idempotency key is already bound to another payload.");
             return existing;
         }
@@ -50,7 +53,7 @@ internal static class CashLedgerEngine
             throw new InvalidOperationException("Open a cashier shift before recording a cash transaction.");
         if (shift.Status != "open")
             throw new InvalidOperationException("Cash movement requires an open cashier shift.");
-        if (shift.UserId != actorUserId)
+        if (shift.UserId != actorUserId && !allowOtherUser)
             throw new InvalidOperationException("The selected cash drawer belongs to another user.");
         if (occurredAt < shift.OpenedAt)
             throw new InvalidOperationException("Cash transaction time cannot be before the cashier shift opened.");

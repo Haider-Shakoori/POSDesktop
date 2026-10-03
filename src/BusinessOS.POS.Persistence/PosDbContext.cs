@@ -419,6 +419,7 @@ public sealed class PosDbContext(DbContextOptions<PosDbContext> options) : DbCon
         cashMovement.Property(x => x.Amount).HasPrecision(18, 2);
         cashMovement.Property(x => x.ExpectedCashAfter).HasPrecision(18, 2);
         cashMovement.HasIndex(x => new { x.CashierShiftId, x.Id });
+        cashMovement.HasIndex(x => new { x.SourceType, x.SourceId, x.MovementType }).IsUnique();
 
         var shiftClosure = modelBuilder.Entity<CashierShiftClosureEntity>();
         shiftClosure.ToTable("cashier_shift_closures");

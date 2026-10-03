@@ -141,7 +141,7 @@ public sealed class LocalCashManagementService(
         var movement = await CashLedgerEngine.RecordAsync(
             context, user.UserId, request.Amount, direction, request.MovementType,
             null, null, null, reason, DateTimeOffset.UtcNow,
-            request.IdempotencyKey, request.ShiftId, cancellationToken);
+            request.IdempotencyKey, request.ShiftId, cancellationToken, allowOtherUser: true);
 
         context.AuditLogs.Add(new AuditLogEntity
         {
