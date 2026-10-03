@@ -1,4 +1,5 @@
 using BusinessOS.POS.Application.Abstractions.Authentication;
+using BusinessOS.POS.Application.Abstractions.Catalog;
 using BusinessOS.POS.Application.Abstractions.Persistence;
 using BusinessOS.POS.Application.Abstractions.Sales;
 using BusinessOS.POS.Application.Abstractions.Storage;
@@ -38,6 +39,7 @@ public static class DependencyInjection
         services.AddSingleton<IUserSessionService, LocalUserSessionService>();
         services.AddSingleton<IPermissionAuthorizer, PermissionAuthorizer>();
         services.AddSingleton<IPosService, LocalPosService>();
+        services.AddSingleton<IProductCatalogService, LocalProductCatalogService>();
 
         return services;
     }

@@ -199,5 +199,96 @@ CREATE TABLE IF NOT EXISTS held_sale_items (
 """;
 
         await context.Database.ExecuteSqlRawAsync(sql, cancellationToken);
+
+        const string catalogSql = """
+CREATE TABLE IF NOT EXISTS categories (
+    Id INTEGER NOT NULL CONSTRAINT PK_categories PRIMARY KEY AUTOINCREMENT,
+    ParentId INTEGER NULL,
+    NameEn TEXT NOT NULL,
+    NameFa TEXT NULL,
+    NamePs TEXT NULL,
+    SortOrder INTEGER NOT NULL DEFAULT 0,
+    IsActive INTEGER NOT NULL DEFAULT 1
+);
+CREATE INDEX IF NOT EXISTS IX_categories_SortOrder_NameEn ON categories (SortOrder, NameEn);
+
+CREATE TABLE IF NOT EXISTS brands (
+    Id INTEGER NOT NULL CONSTRAINT PK_brands PRIMARY KEY AUTOINCREMENT,
+    NameEn TEXT NOT NULL,
+    NameFa TEXT NULL,
+    NamePs TEXT NULL,
+    IsActive INTEGER NOT NULL DEFAULT 1
+);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_brands_NameEn ON brands (NameEn);
+""";
+        await context.Database.ExecuteSqlRawAsync(catalogSql, cancellationToken);
+
+        await EnsureColumnAsync(context, "products", "CategoryId", "INTEGER NULL", cancellationToken);
+        await EnsureColumnAsync(context, "products", "BrandId", "INTEGER NULL", cancellationToken);
+        await EnsureColumnAsync(context, "products", "BaseUnitId", "INTEGER NOT NULL DEFAULT 0", cancellationToken);
+        await EnsureColumnAsync(context, "products", "DescriptionEn", "TEXT NULL", cancellationToken);
+        await EnsureColumnAsync(context, "products", "DescriptionFa", "TEXT NULL", cancellationToken);
+        await EnsureColumnAsync(context, "products", "DescriptionPs", "TEXT NULL", cancellationToken);
+        await EnsureColumnAsync(context, "products", "ShelfLocation", "TEXT NULL", cancellationToken);
+        await EnsureColumnAsync(context, "products", "ImagePath", "TEXT NULL", cancellationToken);
+        await EnsureColumnAsync(context, "products", "WholesalePrice", "TEXT NULL", cancellationToken);
+        await EnsureColumnAsync(context, "products", "ReorderQuantity", "TEXT NOT NULL DEFAULT '0'", cancellationToken);
+        await EnsureColumnAsync(context, "product_units", "WholesalePrice", "TEXT NULL", cancellationToken);
+
+        await context.Database.ExecuteSqlRawAsync("""
+UPDATE products
+SET BaseUnitId = COALESCE(
+    (SELECT UnitId FROM product_units WHERE ProductId = products.Id ORDER BY Id LIMIT 1),
+    (SELECT Id FROM units ORDER BY Id LIMIT 1),
+    0
+)
+WHERE BaseUnitId = 0;
+""", cancellationToken);
+    }
+
+    private static async Task EnsureColumnAsync(
+        PosDbContext context,
+        string table,
+        string column,
+        string definition,
+        CancellationToken cancellationToken)
+    {
+        var connection = context.Database.GetDbConnection();
+        var shouldClose = connection.State != System.Data.ConnectionState.Open;
+        if (shouldClose)
+        {
+            await connection.OpenAsync(cancellationToken);
+        }
+
+        try
+        {
+            await using var check = connection.CreateCommand();
+            check.CommandText = "PRAGMA table_info(" + table + ");";
+            await using var reader = await check.ExecuteReaderAsync(cancellationToken);
+            var exists = false;
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                if (string.Equals(reader.GetString(1), column, StringComparison.OrdinalIgnoreCase))
+                {
+                    exists = true;
+                    break;
+                }
+            }
+
+            await reader.DisposeAsync();
+            if (!exists)
+            {
+                await using var alter = connection.CreateCommand();
+                alter.CommandText = "ALTER TABLE " + table + " ADD COLUMN " + column + " " + definition + ";";
+                await alter.ExecuteNonQueryAsync(cancellationToken);
+            }
+        }
+        finally
+        {
+            if (shouldClose)
+            {
+                await connection.CloseAsync();
+            }
+        }
     }
 }

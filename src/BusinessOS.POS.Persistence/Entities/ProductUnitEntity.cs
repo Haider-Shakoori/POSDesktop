@@ -12,5 +12,6 @@ public sealed class ProductUnitEntity
     public bool CanSell { get; set; } = true;
     public decimal? SellingPrice { get; set; }
     public decimal? MinimumSellingPrice { get; set; }
+    public decimal? WholesalePrice { get; set; }
     public List<ProductBarcodeEntity> Barcodes { get; } = [];
 }

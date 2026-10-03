@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using BusinessOS.POS.Application.Abstractions.Authentication;
 using BusinessOS.POS.Desktop.Appearance;
+using BusinessOS.POS.Desktop.Catalog;
 using BusinessOS.POS.Desktop.Navigation;
 using BusinessOS.POS.Desktop.Pos;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -16,10 +17,12 @@ public partial class MainWindowViewModel : ObservableObject
     public MainWindowViewModel(
         IUserSessionService sessions,
         IPermissionAuthorizer authorizer,
-        PosViewModel pos)
+        PosViewModel pos,
+        ProductCatalogViewModel catalog)
     {
         _sessions = sessions;
         Pos = pos;
+        Catalog = catalog;
 
         var items = new[]
         {
@@ -65,6 +68,8 @@ public partial class MainWindowViewModel : ObservableObject
     public ObservableCollection<NavigationItemViewModel> NavigationItems { get; }
 
     public PosViewModel Pos { get; }
+
+    public ProductCatalogViewModel Catalog { get; }
 
     public AppearanceTheme[] Themes { get; }
 
