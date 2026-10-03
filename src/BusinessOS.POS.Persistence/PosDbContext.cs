@@ -17,7 +17,12 @@ public sealed class PosDbContext(DbContextOptions<PosDbContext> options) : DbCon
     public DbSet<ProductUnitEntity> ProductUnits => Set<ProductUnitEntity>();
     public DbSet<ProductBarcodeEntity> ProductBarcodes => Set<ProductBarcodeEntity>();
     public DbSet<InventoryCostLayerEntity> InventoryCostLayers => Set<InventoryCostLayerEntity>();
+    public DbSet<ProductBatchEntity> ProductBatches => Set<ProductBatchEntity>();
     public DbSet<StockMovementEntity> StockMovements => Set<StockMovementEntity>();
+    public DbSet<StockCountEntity> StockCounts => Set<StockCountEntity>();
+    public DbSet<StockCountItemEntity> StockCountItems => Set<StockCountItemEntity>();
+    public DbSet<InventoryWriteoffEntity> InventoryWriteoffs => Set<InventoryWriteoffEntity>();
+    public DbSet<InventoryWriteoffItemEntity> InventoryWriteoffItems => Set<InventoryWriteoffItemEntity>();
     public DbSet<CashierShiftEntity> CashierShifts => Set<CashierShiftEntity>();
     public DbSet<DocumentSequenceEntity> DocumentSequences => Set<DocumentSequenceEntity>();
     public DbSet<SaleEntity> Sales => Set<SaleEntity>();
@@ -126,21 +131,69 @@ public sealed class PosDbContext(DbContextOptions<PosDbContext> options) : DbCon
         barcode.HasOne(x => x.Product).WithMany(x => x.Barcodes).HasForeignKey(x => x.ProductId).OnDelete(DeleteBehavior.Cascade);
         barcode.HasOne(x => x.ProductUnit).WithMany(x => x.Barcodes).HasForeignKey(x => x.ProductUnitId).OnDelete(DeleteBehavior.Restrict);
 
+        var batch = modelBuilder.Entity<ProductBatchEntity>();
+        batch.ToTable("product_batches");
+        batch.HasKey(x => x.Id);
+        batch.Property(x => x.BatchNumber).HasMaxLength(100).IsRequired();
+        batch.Property(x => x.StockOnHand).HasPrecision(20, 6);
+        batch.HasOne(x => x.Product).WithMany().HasForeignKey(x => x.ProductId).OnDelete(DeleteBehavior.Cascade);
+        batch.HasIndex(x => new { x.ProductId, x.BatchNumber }).IsUnique();
+
         var layer = modelBuilder.Entity<InventoryCostLayerEntity>();
         layer.ToTable("inventory_cost_layers");
         layer.HasKey(x => x.Id);
         layer.Property(x => x.InitialQuantityBase).HasPrecision(20, 6);
         layer.Property(x => x.RemainingQuantityBase).HasPrecision(20, 6);
         layer.Property(x => x.UnitCostBase).HasPrecision(18, 4);
-        layer.HasIndex(x => new { x.ProductId, x.ReceivedAt });
+        layer.HasIndex(x => new { x.ProductId, x.Id });
 
         var move = modelBuilder.Entity<StockMovementEntity>();
         move.ToTable("stock_movements");
         move.HasKey(x => x.Id);
+        move.Property(x => x.SourceQuantity).HasPrecision(20, 6);
+        move.Property(x => x.ConversionFactor).HasPrecision(20, 6);
         move.Property(x => x.QuantityBase).HasPrecision(20, 6);
         move.Property(x => x.BalanceAfter).HasPrecision(20, 6);
+        move.Property(x => x.BatchBalanceAfter).HasPrecision(20, 6);
+        move.Property(x => x.SourceUnitCost).HasPrecision(18, 4);
         move.Property(x => x.UnitCostBase).HasPrecision(18, 4);
-        move.HasIndex(x => new { x.ProductId, x.OccurredAt });
+        move.Property(x => x.IdempotencyKey).HasMaxLength(64);
+        move.HasIndex(x => x.IdempotencyKey).IsUnique();
+        move.HasIndex(x => new { x.ProductId, x.Id });
+
+        var stockCount = modelBuilder.Entity<StockCountEntity>();
+        stockCount.ToTable("stock_counts");
+        stockCount.HasKey(x => x.Id);
+        stockCount.Property(x => x.Number).HasMaxLength(40).IsRequired();
+        stockCount.HasIndex(x => x.Number).IsUnique();
+        stockCount.Property(x => x.IdempotencyKey).HasMaxLength(64).IsRequired();
+        stockCount.HasIndex(x => x.IdempotencyKey).IsUnique();
+        stockCount.Property(x => x.ApprovalIdempotencyKey).HasMaxLength(64);
+        stockCount.HasMany(x => x.Items).WithOne().HasForeignKey(x => x.StockCountId).OnDelete(DeleteBehavior.Cascade);
+
+        var stockCountItem = modelBuilder.Entity<StockCountItemEntity>();
+        stockCountItem.ToTable("stock_count_items");
+        stockCountItem.HasKey(x => x.Id);
+        stockCountItem.Property(x => x.ExpectedQuantityBase).HasPrecision(20, 6);
+        stockCountItem.Property(x => x.PhysicalQuantityBase).HasPrecision(20, 6);
+        stockCountItem.Property(x => x.VarianceQuantityBase).HasPrecision(20, 6);
+        stockCountItem.Property(x => x.CostAmount).HasPrecision(18, 4);
+
+        var writeoff = modelBuilder.Entity<InventoryWriteoffEntity>();
+        writeoff.ToTable("inventory_writeoffs");
+        writeoff.HasKey(x => x.Id);
+        writeoff.Property(x => x.Number).HasMaxLength(40).IsRequired();
+        writeoff.HasIndex(x => x.Number).IsUnique();
+        writeoff.Property(x => x.IdempotencyKey).HasMaxLength(64).IsRequired();
+        writeoff.HasIndex(x => x.IdempotencyKey).IsUnique();
+        writeoff.Property(x => x.TotalCost).HasPrecision(18, 4);
+        writeoff.HasMany(x => x.Items).WithOne().HasForeignKey(x => x.InventoryWriteoffId).OnDelete(DeleteBehavior.Cascade);
+
+        var writeoffItem = modelBuilder.Entity<InventoryWriteoffItemEntity>();
+        writeoffItem.ToTable("inventory_writeoff_items");
+        writeoffItem.HasKey(x => x.Id);
+        writeoffItem.Property(x => x.QuantityBase).HasPrecision(20, 6);
+        writeoffItem.Property(x => x.CostAmount).HasPrecision(18, 4);
 
         var shift = modelBuilder.Entity<CashierShiftEntity>();
         shift.ToTable("cashier_shifts");
