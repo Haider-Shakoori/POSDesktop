@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using BusinessOS.POS.Application.Abstractions.Authentication;
 using BusinessOS.POS.Application.Abstractions.Sales;
+using BusinessOS.POS.Desktop.Sales;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -9,12 +10,21 @@ namespace BusinessOS.POS.Desktop.Pos;
 public sealed partial class PosViewModel : ObservableObject
 {
     private readonly IPosService _pos;
+    private readonly ISalesService _sales;
+    private readonly IReceiptPrintService _printer;
     private readonly IPermissionAuthorizer _authorizer;
     private bool _loaded;
+    private bool _updatingPayments;
 
-    public PosViewModel(IPosService pos, IPermissionAuthorizer authorizer)
+    public PosViewModel(
+        IPosService pos,
+        ISalesService sales,
+        IReceiptPrintService printer,
+        IPermissionAuthorizer authorizer)
     {
         _pos = pos;
+        _sales = sales;
+        _printer = printer;
         _authorizer = authorizer;
 
         SearchCommand = new AsyncRelayCommand(SearchAsync);
@@ -24,12 +34,17 @@ public sealed partial class PosViewModel : ObservableObject
         HoldCommand = new AsyncRelayCommand(HoldAsync, CanHold);
         OpenShiftCommand = new AsyncRelayCommand(OpenShiftAsync);
         ResumeHeldCommand = new AsyncRelayCommand(ResumeHeldAsync, CanResumeHeld);
-        ClearCommand = new RelayCommand(ClearCart, () => Cart.Count > 0);
+        ReleaseHeldCommand = new AsyncRelayCommand(ReleaseHeldAsync, CanReleaseHeld);
+        ClearCommand = new RelayCommand(() => ResetCart(true), () => Cart.Count > 0);
+        AddPaymentCommand = new RelayCommand(AddPayment, CanAddPayment);
+        RemovePaymentCommand = new RelayCommand<PosPaymentEditorRow>(RemovePayment);
+        PrintLastReceiptCommand = new AsyncRelayCommand(PrintLastReceiptAsync, CanPrintLastReceipt);
     }
 
     public ObservableCollection<PosProductSearchItem> SearchResults { get; } = [];
     public ObservableCollection<PosCartLineViewModel> Cart { get; } = [];
     public ObservableCollection<PosPaymentMethod> PaymentMethods { get; } = [];
+    public ObservableCollection<PosPaymentEditorRow> Payments { get; } = [];
     public ObservableCollection<PosHeldSaleSummary> HeldSales { get; } = [];
 
     public IAsyncRelayCommand SearchCommand { get; }
@@ -39,7 +54,11 @@ public sealed partial class PosViewModel : ObservableObject
     public IAsyncRelayCommand HoldCommand { get; }
     public IAsyncRelayCommand OpenShiftCommand { get; }
     public IAsyncRelayCommand ResumeHeldCommand { get; }
+    public IAsyncRelayCommand ReleaseHeldCommand { get; }
     public IRelayCommand ClearCommand { get; }
+    public IRelayCommand AddPaymentCommand { get; }
+    public IRelayCommand<PosPaymentEditorRow> RemovePaymentCommand { get; }
+    public IAsyncRelayCommand PrintLastReceiptCommand { get; }
 
     public bool CanDiscount => _authorizer.HasPermission("sales.discount");
     public bool CanHoldSales => _authorizer.HasPermission("sales.hold");
@@ -47,45 +66,58 @@ public sealed partial class PosViewModel : ObservableObject
 
     [ObservableProperty] private string searchText = string.Empty;
     [ObservableProperty] private PosProductSearchItem? selectedProduct;
-    [ObservableProperty] private PosPaymentMethod? selectedPaymentMethod;
+    [ObservableProperty] private PosPaymentMethod? selectedPaymentMethodToAdd;
     [ObservableProperty] private PosHeldSaleSummary? selectedHeldSale;
-    [ObservableProperty] private decimal paymentAmount;
     [ObservableProperty] private decimal saleDiscountAmount;
+    [ObservableProperty] private string? saleNotes;
     [ObservableProperty] private decimal openingCash;
     [ObservableProperty] private bool isShiftOpen;
     [ObservableProperty] private string shiftStatus = "Shift closed";
     [ObservableProperty] private string statusMessage = "Ready.";
+    [ObservableProperty] private long? lastSaleId;
     [ObservableProperty] private string? lastSaleNumber;
     [ObservableProperty] private bool isBusy;
 
-    public decimal Subtotal => decimal.Round(Cart.Sum(x => x.Subtotal), 2, MidpointRounding.AwayFromZero);
-    public decimal LineDiscountTotal => decimal.Round(Cart.Sum(x => x.DiscountAmount), 2, MidpointRounding.AwayFromZero);
-    public decimal GrandTotal => Math.Max(0m, decimal.Round(Subtotal - LineDiscountTotal - SaleDiscountAmount, 2, MidpointRounding.AwayFromZero));
-    public decimal ChangeAmount => Math.Max(0m, decimal.Round(PaymentAmount - GrandTotal, 2, MidpointRounding.AwayFromZero));
+    public decimal Subtotal => Money(Cart.Sum(x => x.Subtotal));
+    public decimal LineDiscountTotal => Money(Cart.Sum(x => x.DiscountAmount));
+    public decimal GrandTotal => Math.Max(0m, Money(Subtotal - LineDiscountTotal - SaleDiscountAmount));
+    public decimal AppliedPaymentTotal => Money(Payments.Sum(x => x.Amount));
+    public decimal ChangeAmount => Money(Payments.Sum(x => x.ChangeAmount));
+    public decimal RemainingPaymentAmount => Money(Math.Max(0m, GrandTotal - AppliedPaymentTotal));
     public string TotalText => "AFN " + GrandTotal.ToString("N2");
+    public string PaymentSummaryText =>
+        RemainingPaymentAmount > 0m
+            ? "Remaining: AFN " + RemainingPaymentAmount.ToString("N2")
+            : AppliedPaymentTotal > GrandTotal
+                ? "Applied payments exceed total"
+                : "Paid in full";
 
     partial void OnSaleDiscountAmountChanged(decimal value) => RaiseTotals();
-    partial void OnPaymentAmountChanged(decimal value) => OnPropertyChanged(nameof(ChangeAmount));
-    partial void OnSelectedHeldSaleChanged(PosHeldSaleSummary? value) => ResumeHeldCommand.NotifyCanExecuteChanged();
+    partial void OnSelectedHeldSaleChanged(PosHeldSaleSummary? value)
+    {
+        ResumeHeldCommand.NotifyCanExecuteChanged();
+        ReleaseHeldCommand.NotifyCanExecuteChanged();
+    }
+    partial void OnLastSaleIdChanged(long? value) => PrintLastReceiptCommand.NotifyCanExecuteChanged();
+    partial void OnSelectedPaymentMethodToAddChanged(PosPaymentMethod? value) => AddPaymentCommand.NotifyCanExecuteChanged();
 
     public async Task InitializeAsync()
     {
-        if (_loaded)
-        {
-            return;
-        }
+        if (_loaded) return;
 
         await ExecuteBusyAsync(async () =>
         {
             var reference = await _pos.GetReferenceDataAsync();
             PaymentMethods.Clear();
             foreach (var method in reference.PaymentMethods)
-            {
                 PaymentMethods.Add(method);
-            }
 
-            SelectedPaymentMethod = PaymentMethods.FirstOrDefault(x => x.IsCash) ?? PaymentMethods.FirstOrDefault();
+            SelectedPaymentMethodToAdd =
+                PaymentMethods.FirstOrDefault(x => x.IsCash) ??
+                PaymentMethods.FirstOrDefault();
+
             ApplyShift(reference.Shift);
+            EnsureDefaultPayment();
             await SearchCoreAsync();
             await RefreshHeldAsync();
             _loaded = true;
@@ -127,50 +159,39 @@ public sealed partial class PosViewModel : ObservableObject
         var items = await _pos.SearchProductsAsync(SearchText);
         SearchResults.Clear();
         foreach (var item in items)
-        {
             SearchResults.Add(item);
-        }
     }
 
     private void AddSelected()
     {
         if (SelectedProduct is not null)
-        {
             AddProduct(SelectedProduct);
-        }
     }
 
     private void RemoveLine(PosCartLineViewModel? line)
     {
-        if (line is null)
-        {
-            return;
-        }
-
+        if (line is null) return;
         line.TotalsChanged -= OnLineTotalsChanged;
         Cart.Remove(line);
         RaiseTotals();
     }
 
-    private void ClearCart()
+    private void ResetCart(bool showMessage)
     {
         foreach (var line in Cart)
-        {
             line.TotalsChanged -= OnLineTotalsChanged;
-        }
 
         Cart.Clear();
         SaleDiscountAmount = 0m;
+        SaleNotes = null;
+        ResetPayments();
         RaiseTotals();
-        StatusMessage = "Cart cleared.";
+        if (showMessage) StatusMessage = "Cart cleared.";
     }
 
     public async Task CheckoutAsync()
     {
-        if (!CanCheckout() || SelectedPaymentMethod is null)
-        {
-            return;
-        }
+        if (!CanCheckout()) return;
 
         await ExecuteBusyAsync(async () =>
         {
@@ -181,22 +202,27 @@ public sealed partial class PosViewModel : ObservableObject
                     x.Quantity,
                     x.DiscountAmount)).ToList(),
                 SaleDiscountAmount,
-                [new PosPaymentRequest(SelectedPaymentMethod.Code, PaymentAmount)],
-                null));
+                Payments.Select(x => new PosPaymentRequest(
+                    x.Method.Code,
+                    x.Amount,
+                    x.TenderedAmount,
+                    x.Reference,
+                    x.Notes)).ToList(),
+                SaleNotes));
 
+            LastSaleId = result.SaleId;
             LastSaleNumber = result.SaleNumber;
-            StatusMessage = "Sale " + result.SaleNumber + " completed. Change: AFN " + result.ChangeAmount.ToString("N2");
-            ClearCart();
+            ResetCart(false);
+            StatusMessage = "Sale " + result.SaleNumber +
+                            " completed. Change: AFN " + result.ChangeAmount.ToString("N2") +
+                            ". Receipt is ready to print.";
             await SearchCoreAsync();
         });
     }
 
     public async Task HoldAsync()
     {
-        if (!CanHold())
-        {
-            return;
-        }
+        if (!CanHold()) return;
 
         await ExecuteBusyAsync(async () =>
         {
@@ -206,25 +232,23 @@ public sealed partial class PosViewModel : ObservableObject
                     x.Product.ProductUnitId,
                     x.Quantity,
                     x.DiscountAmount)).ToList(),
-                SaleDiscountAmount));
+                SaleDiscountAmount,
+                SaleNotes));
 
+            ResetCart(false);
             StatusMessage = "Sale held as " + held.Number + ".";
-            ClearCart();
             await RefreshHeldAsync();
         });
     }
 
     public async Task ResumeHeldAsync()
     {
-        if (SelectedHeldSale is null)
-        {
-            return;
-        }
+        if (SelectedHeldSale is null) return;
 
         await ExecuteBusyAsync(async () =>
         {
             var detail = await _pos.ResumeHeldSaleAsync(SelectedHeldSale.Id);
-            ClearCart();
+            ResetCart(false);
 
             foreach (var held in detail.Lines)
             {
@@ -252,9 +276,23 @@ public sealed partial class PosViewModel : ObservableObject
             }
 
             SaleDiscountAmount = detail.SaleDiscountAmount;
+            SaleNotes = detail.Notes;
             StatusMessage = detail.Number + " resumed.";
             await RefreshHeldAsync();
             RaiseTotals();
+        });
+    }
+
+    public async Task ReleaseHeldAsync()
+    {
+        if (SelectedHeldSale is null) return;
+
+        await ExecuteBusyAsync(async () =>
+        {
+            var number = SelectedHeldSale.Number;
+            await _pos.ReleaseHeldSaleAsync(SelectedHeldSale.Id);
+            StatusMessage = number + " released.";
+            await RefreshHeldAsync();
         });
     }
 
@@ -268,18 +306,87 @@ public sealed partial class PosViewModel : ObservableObject
         });
     }
 
+    private async Task PrintLastReceiptAsync()
+    {
+        if (LastSaleId is null) return;
+
+        await ExecuteBusyAsync(async () =>
+        {
+            var receipt = await _sales.GetReceiptAsync(LastSaleId.Value)
+                ?? throw new InvalidOperationException("The completed sale could not be found.");
+
+            StatusMessage = _printer.Print(receipt)
+                ? "Receipt " + receipt.Sale.Number + " sent to printer."
+                : "Receipt printing cancelled.";
+        });
+    }
+
+    private void AddPayment()
+    {
+        if (!CanAddPayment() || SelectedPaymentMethodToAdd is null) return;
+
+        var remaining = RemainingPaymentAmount;
+        var row = new PosPaymentEditorRow
+        {
+            Method = SelectedPaymentMethodToAdd,
+            Amount = remaining,
+            TenderedAmount = remaining,
+        };
+        AttachPayment(row);
+        Payments.Add(row);
+        RaisePaymentTotals();
+    }
+
+    private void RemovePayment(PosPaymentEditorRow? row)
+    {
+        if (row is null) return;
+        row.PaymentChanged -= OnPaymentChanged;
+        Payments.Remove(row);
+        if (Payments.Count == 0) EnsureDefaultPayment();
+        RaisePaymentTotals();
+    }
+
+    private void ResetPayments()
+    {
+        foreach (var row in Payments)
+            row.PaymentChanged -= OnPaymentChanged;
+        Payments.Clear();
+        EnsureDefaultPayment();
+    }
+
+    private void EnsureDefaultPayment()
+    {
+        if (Payments.Count > 0 || PaymentMethods.Count == 0) return;
+        var method =
+            PaymentMethods.FirstOrDefault(x => x.IsCash) ??
+            PaymentMethods.First();
+
+        var row = new PosPaymentEditorRow
+        {
+            Method = method,
+            Amount = GrandTotal,
+            TenderedAmount = GrandTotal,
+        };
+        AttachPayment(row);
+        Payments.Add(row);
+        SelectedPaymentMethodToAdd = method;
+        RaisePaymentTotals();
+    }
+
+    private void AttachPayment(PosPaymentEditorRow row) =>
+        row.PaymentChanged += OnPaymentChanged;
+
+    private void OnPaymentChanged(object? sender, EventArgs e) => RaisePaymentTotals();
+
     private async Task RefreshHeldAsync()
     {
         HeldSales.Clear();
-        if (!CanHoldSales)
-        {
-            return;
-        }
+        if (!CanHoldSales) return;
 
         foreach (var held in await _pos.GetHeldSalesAsync())
-        {
             HeldSales.Add(held);
-        }
+
+        SelectedHeldSale = HeldSales.FirstOrDefault();
     }
 
     private void ApplyShift(PosShiftState shift)
@@ -288,6 +395,7 @@ public sealed partial class PosViewModel : ObservableObject
         ShiftStatus = shift.IsOpen
             ? "Shift open · AFN " + shift.OpeningCash.ToString("N2")
             : "Shift closed";
+        CheckoutCommand.NotifyCanExecuteChanged();
     }
 
     private void OnLineTotalsChanged(object? sender, EventArgs e) => RaiseTotals();
@@ -297,35 +405,67 @@ public sealed partial class PosViewModel : ObservableObject
         OnPropertyChanged(nameof(Subtotal));
         OnPropertyChanged(nameof(LineDiscountTotal));
         OnPropertyChanged(nameof(GrandTotal));
-        OnPropertyChanged(nameof(ChangeAmount));
         OnPropertyChanged(nameof(TotalText));
 
-        if (SelectedPaymentMethod?.IsCash == true)
+        if (!_updatingPayments && Payments.Count == 1)
         {
-            PaymentAmount = GrandTotal;
+            _updatingPayments = true;
+            try
+            {
+                var row = Payments[0];
+                row.Amount = GrandTotal;
+                if (!row.IsCash || row.TenderedAmount < GrandTotal)
+                    row.TenderedAmount = GrandTotal;
+            }
+            finally
+            {
+                _updatingPayments = false;
+            }
         }
 
-        CheckoutCommand.NotifyCanExecuteChanged();
+        RaisePaymentTotals();
         HoldCommand.NotifyCanExecuteChanged();
         ClearCommand.NotifyCanExecuteChanged();
     }
 
-    private bool CanCheckout() =>
-        !IsBusy &&
-        Cart.Count > 0 &&
-        SelectedPaymentMethod is not null &&
-        PaymentAmount >= GrandTotal &&
-        GrandTotal >= 0m;
+    private void RaisePaymentTotals()
+    {
+        OnPropertyChanged(nameof(AppliedPaymentTotal));
+        OnPropertyChanged(nameof(ChangeAmount));
+        OnPropertyChanged(nameof(RemainingPaymentAmount));
+        OnPropertyChanged(nameof(PaymentSummaryText));
+        CheckoutCommand.NotifyCanExecuteChanged();
+        AddPaymentCommand.NotifyCanExecuteChanged();
+    }
+
+    private bool CanCheckout()
+    {
+        if (IsBusy || Cart.Count == 0 || GrandTotal < 0m || Payments.Count is < 1 or > 8)
+            return false;
+
+        if (AppliedPaymentTotal != GrandTotal)
+            return false;
+
+        foreach (var payment in Payments)
+        {
+            if (payment.Amount <= 0m || payment.TenderedAmount < payment.Amount)
+                return false;
+            if (!payment.IsCash && payment.TenderedAmount != payment.Amount)
+                return false;
+        }
+
+        return !Payments.Any(x => x.IsCash) || IsShiftOpen;
+    }
 
     private bool CanHold() => !IsBusy && CanHoldSales && Cart.Count > 0;
     private bool CanResumeHeld() => !IsBusy && SelectedHeldSale is not null;
+    private bool CanReleaseHeld() => !IsBusy && SelectedHeldSale is not null;
+    private bool CanAddPayment() => !IsBusy && Payments.Count < 8 && SelectedPaymentMethodToAdd is not null;
+    private bool CanPrintLastReceipt() => !IsBusy && LastSaleId is not null;
 
     private async Task ExecuteBusyAsync(Func<Task> action)
     {
-        if (IsBusy)
-        {
-            return;
-        }
+        if (IsBusy) return;
 
         IsBusy = true;
         NotifyCommands();
@@ -349,5 +489,11 @@ public sealed partial class PosViewModel : ObservableObject
         CheckoutCommand.NotifyCanExecuteChanged();
         HoldCommand.NotifyCanExecuteChanged();
         ResumeHeldCommand.NotifyCanExecuteChanged();
+        ReleaseHeldCommand.NotifyCanExecuteChanged();
+        AddPaymentCommand.NotifyCanExecuteChanged();
+        PrintLastReceiptCommand.NotifyCanExecuteChanged();
     }
+
+    private static decimal Money(decimal value) =>
+        decimal.Round(value, 2, MidpointRounding.AwayFromZero);
 }
