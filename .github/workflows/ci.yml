@@ -1,0 +1,26 @@
+name: posdesktop-ci
+
+on:
+  push:
+    branches: [main, "feat/**", "fix/**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-test:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+          cache: true
+          cache-dependency-path: "**/*.csproj"
+      - name: Restore
+        run: dotnet restore BusinessOS.POS.sln
+      - name: Build
+        run: dotnet build BusinessOS.POS.sln --configuration Release --no-restore
+      - name: Unit tests
+        run: dotnet test tests/BusinessOS.POS.UnitTests/BusinessOS.POS.UnitTests.csproj --configuration Release --no-build --verbosity normal
+      - name: Vulnerable packages
+        run: dotnet list BusinessOS.POS.sln package --vulnerable --include-transitive
