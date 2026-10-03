@@ -380,6 +380,7 @@ public sealed class LocalCashManagementService(
             ExpenseCategoryId = category.Id,
             PaymentMethodId = method.Id,
             RecordedByUserId = user.UserId,
+            BusinessDate = BusinessDayGuard.LocalBusinessDate(occurredAt),
             EntryType = request.EntryType,
             Amount = amount,
             Reference = Clean(request.Reference),

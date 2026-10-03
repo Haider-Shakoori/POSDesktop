@@ -207,6 +207,7 @@ public sealed class LocalSaleReturnService(
             IdempotencyKey = idempotencyKey,
             SaleId = sale.Id,
             CreatedByUserId = user.UserId,
+            BusinessDate = BusinessDayGuard.LocalBusinessDate(postedAt),
             Type = type,
             Status = "posted",
             Reason = reason,

@@ -223,6 +223,7 @@ public sealed class LocalCustomerService(
             CustomerId = customer.Id,
             PaymentMethodCode = method.Code,
             RecordedByUserId = sessions.Current!.UserId,
+            BusinessDate = BusinessDayGuard.LocalBusinessDate(collectedAt),
             Amount = amount,
             TenderedAmount = tendered,
             ChangeAmount = method.IsCash ? Money(tendered - amount) : 0m,

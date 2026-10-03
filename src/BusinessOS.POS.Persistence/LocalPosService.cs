@@ -452,6 +452,7 @@ public sealed class LocalPosService(
             CashierUserId = user.UserId,
             CashierShiftId = shift?.Id,
             CustomerId = customer?.Id,
+            BusinessDate = BusinessDayGuard.LocalBusinessDate(soldAt),
             CustomerNameSnapshot = customer?.Name ?? "Walk-in Customer",
             Subtotal = subtotal,
             LineDiscountTotal = lineDiscountTotal,
