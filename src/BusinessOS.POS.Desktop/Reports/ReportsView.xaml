@@ -1,0 +1,230 @@
+<UserControl x:Class="BusinessOS.POS.Desktop.Reports.ReportsView"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ Loaded="OnLoaded">
+ <Grid>
+  <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="12"/><RowDefinition Height="Auto"/><RowDefinition Height="12"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+
+  <Border Style="{StaticResource CardBorderStyle}">
+   <Grid>
+    <Grid.ColumnDefinitions>
+     <ColumnDefinition Width="135"/><ColumnDefinition Width="10"/><ColumnDefinition Width="135"/><ColumnDefinition Width="10"/>
+     <ColumnDefinition/><ColumnDefinition Width="10"/><ColumnDefinition/><ColumnDefinition Width="10"/>
+     <ColumnDefinition/><ColumnDefinition Width="10"/><ColumnDefinition/><ColumnDefinition Width="10"/>
+     <ColumnDefinition Width="90"/><ColumnDefinition Width="10"/><ColumnDefinition Width="110"/>
+    </Grid.ColumnDefinitions>
+    <StackPanel><TextBlock Text="From" Style="{StaticResource MutedTextStyle}"/><DatePicker SelectedDate="{Binding FromDate}" Margin="0,3,0,0"/></StackPanel>
+    <StackPanel Grid.Column="2"><TextBlock Text="To" Style="{StaticResource MutedTextStyle}"/><DatePicker SelectedDate="{Binding ToDate}" Margin="0,3,0,0"/></StackPanel>
+    <StackPanel Grid.Column="4"><TextBlock Text="Customer" Style="{StaticResource MutedTextStyle}"/><ComboBox ItemsSource="{Binding Customers}" SelectedItem="{Binding SelectedCustomer}" Margin="0,3,0,0"/></StackPanel>
+    <StackPanel Grid.Column="6"><TextBlock Text="Supplier" Style="{StaticResource MutedTextStyle}"/><ComboBox ItemsSource="{Binding Suppliers}" SelectedItem="{Binding SelectedSupplier}" Margin="0,3,0,0"/></StackPanel>
+    <StackPanel Grid.Column="8"><TextBlock Text="Product" Style="{StaticResource MutedTextStyle}"/><ComboBox ItemsSource="{Binding Products}" SelectedItem="{Binding SelectedProduct}" Margin="0,3,0,0"/></StackPanel>
+    <StackPanel Grid.Column="10"><TextBlock Text="Category" Style="{StaticResource MutedTextStyle}"/><ComboBox ItemsSource="{Binding Categories}" SelectedItem="{Binding SelectedCategory}" Margin="0,3,0,0"/></StackPanel>
+    <Button Grid.Column="12" Content="Apply" Command="{Binding RefreshCommand}" Style="{StaticResource PrimaryButtonStyle}" VerticalAlignment="Bottom"/>
+    <Button Grid.Column="14" Content="Export CSV" Command="{Binding ExportCsvCommand}" Style="{StaticResource SecondaryButtonStyle}" VerticalAlignment="Bottom"/>
+   </Grid>
+  </Border>
+
+  <Grid Grid.Row="2">
+   <Grid.ColumnDefinitions>
+    <ColumnDefinition/><ColumnDefinition Width="10"/><ColumnDefinition/><ColumnDefinition Width="10"/>
+    <ColumnDefinition/><ColumnDefinition Width="10"/><ColumnDefinition/><ColumnDefinition Width="10"/><ColumnDefinition/>
+   </Grid.ColumnDefinitions>
+   <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}">
+    <StackPanel><TextBlock Text="NET SALES" Style="{StaticResource StatLabelStyle}"/>
+     <TextBlock Text="{Binding NetSales, StringFormat=AFN {0:N2}}" Style="{StaticResource StatValueStyle}"/>
+     <TextBlock Text="{Binding SalesCount, StringFormat={}{0} sales}" Style="{StaticResource MutedTextStyle}"/></StackPanel>
+   </Border>
+   <Border Grid.Column="2" Style="{StaticResource CardBorderStyle}">
+    <StackPanel><TextBlock Text="AVERAGE ORDER" Style="{StaticResource StatLabelStyle}"/>
+     <TextBlock Text="{Binding AverageOrderValue, StringFormat=AFN {0:N2}}" Style="{StaticResource StatValueStyle}"/>
+     <TextBlock Text="{Binding Returns, StringFormat=Returns AFN {0:N2}}" Style="{StaticResource MutedTextStyle}"/></StackPanel>
+   </Border>
+   <Border Grid.Column="4" Style="{StaticResource CardBorderStyle}">
+    <StackPanel><TextBlock Text="RECEIVABLES" Style="{StaticResource StatLabelStyle}"/>
+     <TextBlock Text="{Binding Receivables, StringFormat=AFN {0:N2}}" Style="{StaticResource StatValueStyle}"/></StackPanel>
+   </Border>
+   <Border Grid.Column="6" Style="{StaticResource CardBorderStyle}">
+    <StackPanel><TextBlock Text="PAYABLES" Style="{StaticResource StatLabelStyle}"/>
+     <TextBlock Text="{Binding Payables, StringFormat=AFN {0:N2}}" Style="{StaticResource StatValueStyle}"/></StackPanel>
+   </Border>
+   <Border Grid.Column="8" Style="{StaticResource CardBorderStyle}">
+    <StackPanel><TextBlock Text="PURCHASES" Style="{StaticResource StatLabelStyle}"/>
+     <TextBlock Text="{Binding Purchases, StringFormat=AFN {0:N2}}" Style="{StaticResource StatValueStyle}"/>
+     <TextBlock Text="{Binding StatusMessage}" Style="{StaticResource MutedTextStyle}" TextTrimming="CharacterEllipsis"/></StackPanel>
+   </Border>
+  </Grid>
+
+  <TabControl Grid.Row="4">
+   <TabItem Header="Overview">
+    <Grid>
+     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="12"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+     <Grid>
+      <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="10"/><ColumnDefinition/><ColumnDefinition Width="10"/><ColumnDefinition/><ColumnDefinition Width="10"/><ColumnDefinition/></Grid.ColumnDefinitions>
+      <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}">
+       <StackPanel><TextBlock Text="LOW STOCK" Style="{StaticResource StatLabelStyle}"/><TextBlock Text="{Binding LowStock}" Style="{StaticResource StatValueStyle}"/></StackPanel>
+      </Border>
+      <Border Grid.Column="2" Style="{StaticResource CardBorderStyle}">
+       <StackPanel><TextBlock Text="OUT OF STOCK" Style="{StaticResource StatLabelStyle}"/><TextBlock Text="{Binding OutOfStock}" Style="{StaticResource StatValueStyle}"/></StackPanel>
+      </Border>
+      <Border Grid.Column="4" Style="{StaticResource CardBorderStyle}">
+       <StackPanel><TextBlock Text="EXPIRED BATCHES" Style="{StaticResource StatLabelStyle}"/><TextBlock Text="{Binding ExpiredBatches}" Style="{StaticResource StatValueStyle}"/></StackPanel>
+      </Border>
+      <Border Grid.Column="6" Style="{StaticResource CardBorderStyle}">
+       <StackPanel><TextBlock Text="EXPIRING ≤30 DAYS" Style="{StaticResource StatLabelStyle}"/><TextBlock Text="{Binding ExpiringBatches}" Style="{StaticResource StatValueStyle}"/></StackPanel>
+      </Border>
+     </Grid>
+     <DataGrid Grid.Row="2" ItemsSource="{Binding SalesTrend}" AutoGenerateColumns="False" IsReadOnly="True">
+      <DataGrid.Columns>
+       <DataGridTextColumn Header="Date" Binding="{Binding BusinessDate, StringFormat=d}" Width="150"/>
+       <DataGridTextColumn Header="Sales Count" Binding="{Binding SalesCount}" Width="120"/>
+       <DataGridTextColumn Header="Net Sales (AFN)" Binding="{Binding NetSales, StringFormat=N2}" Width="150"/>
+      </DataGrid.Columns>
+     </DataGrid>
+    </Grid>
+   </TabItem>
+
+   <TabItem Header="Products">
+    <Grid>
+     <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="12"/><ColumnDefinition/></Grid.ColumnDefinitions>
+     <GroupBox Header="Best sellers">
+      <DataGrid ItemsSource="{Binding TopProducts}" AutoGenerateColumns="False" IsReadOnly="True">
+       <DataGrid.Columns>
+        <DataGridTextColumn Header="SKU" Binding="{Binding Sku}" Width="110"/>
+        <DataGridTextColumn Header="Product" Binding="{Binding Product}" Width="*"/>
+        <DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="130"/>
+        <DataGridTextColumn Header="Qty" Binding="{Binding QuantityBase, StringFormat=N2}" Width="80"/>
+        <DataGridTextColumn Header="Net Sales" Binding="{Binding NetSales, StringFormat=N2}" Width="100"/>
+       </DataGrid.Columns>
+      </DataGrid>
+     </GroupBox>
+     <GroupBox Grid.Column="2" Header="Slow movers">
+      <DataGrid ItemsSource="{Binding SlowProducts}" AutoGenerateColumns="False" IsReadOnly="True">
+       <DataGrid.Columns>
+        <DataGridTextColumn Header="SKU" Binding="{Binding Sku}" Width="110"/>
+        <DataGridTextColumn Header="Product" Binding="{Binding Product}" Width="*"/>
+        <DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="130"/>
+        <DataGridTextColumn Header="Qty" Binding="{Binding QuantityBase, StringFormat=N2}" Width="80"/>
+        <DataGridTextColumn Header="Net Sales" Binding="{Binding NetSales, StringFormat=N2}" Width="100"/>
+       </DataGrid.Columns>
+      </DataGrid>
+     </GroupBox>
+    </Grid>
+   </TabItem>
+
+   <TabItem Header="Customers &amp; Suppliers">
+    <Grid>
+     <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="12"/><ColumnDefinition/></Grid.ColumnDefinitions>
+     <GroupBox Header="Customer activity">
+      <DataGrid ItemsSource="{Binding CustomerActivity}" AutoGenerateColumns="False" IsReadOnly="True">
+       <DataGrid.Columns>
+        <DataGridTextColumn Header="Customer" Binding="{Binding Customer}" Width="*"/>
+        <DataGridTextColumn Header="Phone" Binding="{Binding Phone}" Width="120"/>
+        <DataGridTextColumn Header="Sales" Binding="{Binding SalesCount}" Width="70"/>
+        <DataGridTextColumn Header="Sales Total" Binding="{Binding SalesTotal, StringFormat=N2}" Width="105"/>
+        <DataGridTextColumn Header="Balance" Binding="{Binding CurrentBalance, StringFormat=N2}" Width="95"/>
+       </DataGrid.Columns>
+      </DataGrid>
+     </GroupBox>
+     <GroupBox Grid.Column="2" Header="Supplier activity">
+      <DataGrid ItemsSource="{Binding SupplierActivity}" AutoGenerateColumns="False" IsReadOnly="True">
+       <DataGrid.Columns>
+        <DataGridTextColumn Header="Supplier" Binding="{Binding Supplier}" Width="*"/>
+        <DataGridTextColumn Header="Phone" Binding="{Binding Phone}" Width="120"/>
+        <DataGridTextColumn Header="Receipts" Binding="{Binding ReceiptCount}" Width="75"/>
+        <DataGridTextColumn Header="Purchases" Binding="{Binding PurchasesTotal, StringFormat=N2}" Width="105"/>
+        <DataGridTextColumn Header="Balance" Binding="{Binding CurrentBalance, StringFormat=N2}" Width="95"/>
+       </DataGrid.Columns>
+      </DataGrid>
+     </GroupBox>
+    </Grid>
+   </TabItem>
+
+   <TabItem Header="Expiry &amp; Closings">
+    <Grid>
+     <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="12"/><ColumnDefinition/></Grid.ColumnDefinitions>
+     <GroupBox Header="Expiry watch">
+      <DataGrid ItemsSource="{Binding Expiring}" AutoGenerateColumns="False" IsReadOnly="True">
+       <DataGrid.Columns>
+        <DataGridTextColumn Header="SKU" Binding="{Binding Sku}" Width="100"/>
+        <DataGridTextColumn Header="Product" Binding="{Binding Product}" Width="*"/>
+        <DataGridTextColumn Header="Batch" Binding="{Binding BatchNumber}" Width="110"/>
+        <DataGridTextColumn Header="Stock" Binding="{Binding StockOnHand, StringFormat=N2}" Width="80"/>
+        <DataGridTextColumn Header="Expiry" Binding="{Binding ExpiresAt, StringFormat=d}" Width="100"/>
+       </DataGrid.Columns>
+      </DataGrid>
+     </GroupBox>
+     <GroupBox Grid.Column="2" Header="Daily closing history">
+      <DataGrid ItemsSource="{Binding ClosingHistory}" AutoGenerateColumns="False" IsReadOnly="True">
+       <DataGrid.Columns>
+        <DataGridTextColumn Header="Date" Binding="{Binding BusinessDate, StringFormat=d}" Width="105"/>
+        <DataGridTextColumn Header="Number" Binding="{Binding Number}" Width="145"/>
+        <DataGridTextColumn Header="Rev" Binding="{Binding Version}" Width="55"/>
+        <DataGridTextColumn Header="Net Sales" Binding="{Binding NetSales, StringFormat=N2}" Width="95"/>
+        <DataGridTextColumn Header="Variance" Binding="{Binding Variance, StringFormat=N2}" Width="85"/>
+        <DataGridTextColumn Header="Closed" Binding="{Binding ClosedAt, StringFormat=g}" Width="135"/>
+       </DataGrid.Columns>
+      </DataGrid>
+     </GroupBox>
+    </Grid>
+   </TabItem>
+
+   <TabItem Header="Timing">
+    <Grid>
+     <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="12"/><ColumnDefinition/></Grid.ColumnDefinitions>
+     <GroupBox Header="Peak hours">
+      <DataGrid ItemsSource="{Binding PeakHours}" AutoGenerateColumns="False" IsReadOnly="True">
+       <DataGrid.Columns>
+        <DataGridTextColumn Header="Hour" Binding="{Binding Label}" Width="*"/>
+        <DataGridTextColumn Header="Sales" Binding="{Binding SalesCount}" Width="90"/>
+        <DataGridTextColumn Header="Net Sales" Binding="{Binding NetSales, StringFormat=N2}" Width="120"/>
+       </DataGrid.Columns>
+      </DataGrid>
+     </GroupBox>
+     <GroupBox Grid.Column="2" Header="Weekday performance">
+      <DataGrid ItemsSource="{Binding Weekdays}" AutoGenerateColumns="False" IsReadOnly="True">
+       <DataGrid.Columns>
+        <DataGridTextColumn Header="Weekday" Binding="{Binding Label}" Width="*"/>
+        <DataGridTextColumn Header="Sales" Binding="{Binding SalesCount}" Width="90"/>
+        <DataGridTextColumn Header="Net Sales" Binding="{Binding NetSales, StringFormat=N2}" Width="120"/>
+       </DataGrid.Columns>
+      </DataGrid>
+     </GroupBox>
+    </Grid>
+   </TabItem>
+
+   <TabItem Header="Profit">
+    <TabItem.Style>
+     <Style TargetType="TabItem">
+      <Setter Property="Visibility" Value="Visible"/>
+      <Style.Triggers>
+       <DataTrigger Binding="{Binding CanViewProfit}" Value="False"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+      </Style.Triggers>
+     </Style>
+    </TabItem.Style>
+    <Grid>
+     <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="12"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+     <Grid>
+      <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="10"/><ColumnDefinition/><ColumnDefinition Width="10"/><ColumnDefinition/></Grid.ColumnDefinitions>
+      <Border Grid.Column="0" Style="{StaticResource CardBorderStyle}">
+       <StackPanel><TextBlock Text="GROSS PROFIT" Style="{StaticResource StatLabelStyle}"/><TextBlock Text="{Binding GrossProfit, StringFormat=AFN {0:N2}}" Style="{StaticResource StatValueStyle}"/></StackPanel>
+      </Border>
+      <Border Grid.Column="2" Style="{StaticResource CardBorderStyle}">
+       <StackPanel><TextBlock Text="NET PROFIT" Style="{StaticResource StatLabelStyle}"/><TextBlock Text="{Binding NetProfit, StringFormat=AFN {0:N2}}" Style="{StaticResource StatValueStyle}"/></StackPanel>
+      </Border>
+      <Border Grid.Column="4" Style="{StaticResource CardBorderStyle}">
+       <StackPanel><TextBlock Text="INVENTORY VALUE" Style="{StaticResource StatLabelStyle}"/><TextBlock Text="{Binding InventoryValue, StringFormat=AFN {0:N2}}" Style="{StaticResource StatValueStyle}"/></StackPanel>
+      </Border>
+     </Grid>
+     <DataGrid Grid.Row="2" ItemsSource="{Binding CategoryProfit}" AutoGenerateColumns="False" IsReadOnly="True">
+      <DataGrid.Columns>
+       <DataGridTextColumn Header="Category" Binding="{Binding Category}" Width="*"/>
+       <DataGridTextColumn Header="Net Sales" Binding="{Binding NetSales, StringFormat=N2}" Width="140"/>
+       <DataGridTextColumn Header="COGS" Binding="{Binding Cogs, StringFormat=N2}" Width="120"/>
+       <DataGridTextColumn Header="Gross Profit" Binding="{Binding GrossProfit, StringFormat=N2}" Width="140"/>
+      </DataGrid.Columns>
+     </DataGrid>
+    </Grid>
+   </TabItem>
+  </TabControl>
+ </Grid>
+</UserControl>
