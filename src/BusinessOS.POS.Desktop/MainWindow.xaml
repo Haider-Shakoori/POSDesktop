@@ -4,6 +4,7 @@
         xmlns:pos="clr-namespace:BusinessOS.POS.Desktop.Pos"
         xmlns:catalog="clr-namespace:BusinessOS.POS.Desktop.Catalog"
         xmlns:cash="clr-namespace:BusinessOS.POS.Desktop.Cash"
+        xmlns:closing="clr-namespace:BusinessOS.POS.Desktop.Closing"
         xmlns:expenses="clr-namespace:BusinessOS.POS.Desktop.Expenses"
         xmlns:inventory="clr-namespace:BusinessOS.POS.Desktop.Inventory"
         xmlns:sales="clr-namespace:BusinessOS.POS.Desktop.Sales"
@@ -145,6 +146,10 @@
 
         <DataTemplate x:Key="CashTemplate">
             <cash:CashView DataContext="{Binding DataContext.Cash, RelativeSource={RelativeSource AncestorType=Window}}" />
+        </DataTemplate>
+
+        <DataTemplate x:Key="ClosingTemplate">
+            <closing:DailyClosingView DataContext="{Binding DataContext.Closing, RelativeSource={RelativeSource AncestorType=Window}}" />
         </DataTemplate>
 
         <DataTemplate x:Key="ExpensesTemplate">
@@ -325,6 +330,9 @@
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding SelectedNavigation.Key}" Value="cash">
                                     <Setter Property="ContentTemplate" Value="{StaticResource CashTemplate}" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectedNavigation.Key}" Value="closing">
+                                    <Setter Property="ContentTemplate" Value="{StaticResource ClosingTemplate}" />
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding SelectedNavigation.Key}" Value="expenses">
                                     <Setter Property="ContentTemplate" Value="{StaticResource ExpensesTemplate}" />

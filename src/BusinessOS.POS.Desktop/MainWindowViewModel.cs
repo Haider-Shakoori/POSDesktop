@@ -3,6 +3,7 @@ using BusinessOS.POS.Application.Abstractions.Authentication;
 using BusinessOS.POS.Desktop.Appearance;
 using BusinessOS.POS.Desktop.Catalog;
 using BusinessOS.POS.Desktop.Cash;
+using BusinessOS.POS.Desktop.Closing;
 using BusinessOS.POS.Desktop.Expenses;
 using BusinessOS.POS.Desktop.Inventory;
 using BusinessOS.POS.Desktop.Customers;
@@ -30,6 +31,7 @@ public partial class MainWindowViewModel : ObservableObject
         CustomersViewModel customers,
         PurchasingViewModel purchasing,
         CashViewModel cash,
+        DailyClosingViewModel closing,
         ExpensesViewModel expenses)
     {
         _sessions = sessions;
@@ -40,6 +42,7 @@ public partial class MainWindowViewModel : ObservableObject
         Customers = customers;
         Purchasing = purchasing;
         Cash = cash;
+        Closing = closing;
         Expenses = expenses;
 
         var items = new[]
@@ -98,6 +101,8 @@ public partial class MainWindowViewModel : ObservableObject
     public PurchasingViewModel Purchasing { get; }
 
     public CashViewModel Cash { get; }
+
+    public DailyClosingViewModel Closing { get; }
 
     public ExpensesViewModel Expenses { get; }
 
