@@ -35,7 +35,9 @@ public sealed record SaleDetailLine(
     decimal Cogs,
     decimal GrossProfit,
     decimal ReturnedQuantity,
-    decimal ReturnableQuantity);
+    decimal ReturnableQuantity,
+    decimal ReturnedAmount,
+    decimal ReturnableAmount);
 
 public sealed record SaleDetailPayment(
     string MethodCode,

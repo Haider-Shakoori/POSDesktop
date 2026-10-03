@@ -64,6 +64,31 @@ public sealed class LocalSaleReturnService(
             x.RefundTotal, x.PostedAt)).ToList();
     }
 
+
+    public async Task<IReadOnlyList<SaleRefundMethod>> GetRefundMethodsAsync(
+        CancellationToken cancellationToken = default)
+    {
+        if (!authorizer.HasPermission("sales.return") && !authorizer.HasPermission("sales.void"))
+            throw new InvalidOperationException("The user is not allowed to refund sales.");
+
+        var locale = sessions.Current?.PreferredLocale ?? "en";
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+        return (await context.PaymentMethods.AsNoTracking()
+            .Where(x => x.IsActive)
+            .OrderBy(x => x.SortOrder)
+            .ToListAsync(cancellationToken))
+            .Select(x => new SaleRefundMethod(
+                x.Code,
+                locale switch
+                {
+                    "fa" when !string.IsNullOrWhiteSpace(x.NameFa) => x.NameFa!,
+                    "ps" when !string.IsNullOrWhiteSpace(x.NamePs) => x.NamePs!,
+                    _ => x.NameEn,
+                },
+                x.IsCash))
+            .ToList();
+    }
+
     private async Task<SaleReturnResult> PostAsync(
         string idempotencyKey,
         long saleId,

@@ -5,7 +5,10 @@ public interface ISaleReturnService
     Task<SaleReturnResult> ReturnAsync(SaleReturnRequest request, CancellationToken cancellationToken = default);
     Task<SaleReturnResult> VoidAsync(SaleVoidRequest request, CancellationToken cancellationToken = default);
     Task<IReadOnlyList<SaleReturnSummary>> GetReturnsAsync(long? saleId = null, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<SaleRefundMethod>> GetRefundMethodsAsync(CancellationToken cancellationToken = default);
 }
+
+public sealed record SaleRefundMethod(string Code, string Name, bool IsCash);
 
 public sealed record SaleReturnLineRequest(long SaleItemId, decimal Quantity);
 
