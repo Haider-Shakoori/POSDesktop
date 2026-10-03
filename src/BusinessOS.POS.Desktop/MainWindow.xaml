@@ -1,0 +1,261 @@
+<Window x:Class="BusinessOS.POS.Desktop.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="BusinessOS POS"
+        Width="1440"
+        Height="900"
+        MinWidth="1180"
+        MinHeight="720"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource AppBackgroundBrush}"
+        FontFamily="Segoe UI">
+    <Window.Resources>
+        <DataTemplate x:Key="DashboardTemplate">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="0,0,8,24">
+                    <Grid Margin="0,0,0,20">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition />
+                            <ColumnDefinition Width="16" />
+                            <ColumnDefinition />
+                            <ColumnDefinition Width="16" />
+                            <ColumnDefinition />
+                            <ColumnDefinition Width="16" />
+                            <ColumnDefinition />
+                        </Grid.ColumnDefinitions>
+
+                        <Border Style="{StaticResource CardBorderStyle}" Grid.Column="0">
+                            <StackPanel>
+                                <TextBlock Text="TODAY'S SALES" Style="{StaticResource StatLabelStyle}" />
+                                <TextBlock Text="AFN 0" Style="{StaticResource StatValueStyle}" />
+                                <TextBlock Text="Ready for live POS data" Style="{StaticResource MutedTextStyle}" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource CardBorderStyle}" Grid.Column="2">
+                            <StackPanel>
+                                <TextBlock Text="TRANSACTIONS" Style="{StaticResource StatLabelStyle}" />
+                                <TextBlock Text="0" Style="{StaticResource StatValueStyle}" />
+                                <TextBlock Text="Sales and returns" Style="{StaticResource MutedTextStyle}" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource CardBorderStyle}" Grid.Column="4">
+                            <StackPanel>
+                                <TextBlock Text="CASH ON HAND" Style="{StaticResource StatLabelStyle}" />
+                                <TextBlock Text="AFN 0" Style="{StaticResource StatValueStyle}" />
+                                <TextBlock Text="Current cashier shift" Style="{StaticResource MutedTextStyle}" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource CardBorderStyle}" Grid.Column="6">
+                            <StackPanel>
+                                <TextBlock Text="LOW STOCK" Style="{StaticResource StatLabelStyle}" />
+                                <TextBlock Text="0" Style="{StaticResource StatValueStyle}" />
+                                <TextBlock Text="Inventory alerts" Style="{StaticResource MutedTextStyle}" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="2*" />
+                            <ColumnDefinition Width="18" />
+                            <ColumnDefinition />
+                        </Grid.ColumnDefinitions>
+
+                        <Border Style="{StaticResource CardBorderStyle}">
+                            <StackPanel>
+                                <TextBlock Text="Quick actions" Style="{StaticResource SectionTitleStyle}" />
+                                <TextBlock Text="Start the most common cashier workflows." Style="{StaticResource MutedTextStyle}" Margin="0,4,0,18" />
+                                <WrapPanel>
+                                    <Button Content="New Sale" Style="{StaticResource PrimaryButtonStyle}" Margin="0,0,10,10" />
+                                    <Button Content="Open Shift" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,10,10" />
+                                    <Button Content="Receive Stock" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,10,10" />
+                                    <Button Content="Daily Closing" Style="{StaticResource SecondaryButtonStyle}" Margin="0,0,10,10" />
+                                </WrapPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Style="{StaticResource CardBorderStyle}" Grid.Column="2">
+                            <StackPanel>
+                                <TextBlock Text="Afghanistan profile" Style="{StaticResource SectionTitleStyle}" />
+                                <Grid Margin="0,16,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition />
+                                        <ColumnDefinition Width="Auto" />
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel>
+                                        <TextBlock Text="Currency" Style="{StaticResource MutedTextStyle}" />
+                                        <TextBlock Text="Tax" Style="{StaticResource MutedTextStyle}" Margin="0,12,0,0" />
+                                        <TextBlock Text="Languages" Style="{StaticResource MutedTextStyle}" Margin="0,12,0,0" />
+                                        <TextBlock Text="Operation" Style="{StaticResource MutedTextStyle}" Margin="0,12,0,0" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" HorizontalAlignment="Right">
+                                        <TextBlock Text="AFN" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" />
+                                        <TextBlock Text="No tax" FontWeight="SemiBold" Foreground="{DynamicResource SuccessBrush}" Margin="0,12,0,0" />
+                                        <TextBlock Text="EN / دری / پښتو" FontWeight="SemiBold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,12,0,0" />
+                                        <TextBlock Text="Offline-first" FontWeight="SemiBold" Foreground="{DynamicResource BrandPrimaryBrush}" Margin="0,12,0,0" />
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <Border Style="{StaticResource CardBorderStyle}" Margin="0,18,0,0">
+                        <StackPanel>
+                            <TextBlock Text="Desktop foundation status" Style="{StaticResource SectionTitleStyle}" />
+                            <TextBlock Text="Shell, theme switching, module navigation and CI foundation are active. Live business data will be connected module by module from the existing POS system." TextWrapping="Wrap" Style="{StaticResource BodyTextStyle}" Margin="0,8,0,0" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+        </DataTemplate>
+
+        <DataTemplate x:Key="ModuleTemplate">
+            <Border Style="{StaticResource CardBorderStyle}" VerticalAlignment="Top">
+                <StackPanel>
+                    <TextBlock Text="{Binding DataContext.SelectedNavigation.Title, RelativeSource={RelativeSource AncestorType=Window}}" Style="{StaticResource SectionTitleStyle}" />
+                    <TextBlock Text="{Binding DataContext.SelectedNavigation.Subtitle, RelativeSource={RelativeSource AncestorType=Window}}" Style="{StaticResource MutedTextStyle}" Margin="0,6,0,18" />
+                    <Border Background="{DynamicResource BrandPrimarySoftBrush}" CornerRadius="10" Padding="16">
+                        <TextBlock Text="Desktop workflow scaffolded. The functional implementation for this module will be connected to the existing POS business rules in the next batches." TextWrapping="Wrap" Foreground="{DynamicResource BrandPrimaryDarkBrush}" />
+                    </Border>
+                </StackPanel>
+            </Border>
+        </DataTemplate>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="244" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <Border Background="{DynamicResource SidebarBrush}"
+                BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="0,0,1,0">
+            <DockPanel Margin="16">
+                <StackPanel DockPanel.Dock="Top" Margin="4,4,4,18">
+                    <Border Width="46" Height="46" CornerRadius="14" Background="{DynamicResource BrandPrimaryBrush}" HorizontalAlignment="Left">
+                        <TextBlock Text="B" Foreground="White" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <TextBlock Text="BusinessOS POS" FontSize="20" FontWeight="Bold" Foreground="{DynamicResource TextPrimaryBrush}" Margin="0,12,0,0" />
+                    <TextBlock Text="Desktop" Style="{StaticResource MutedTextStyle}" />
+                </StackPanel>
+
+                <TextBlock DockPanel.Dock="Bottom"
+                           Text="BusinessOS.af • WeSoft Technologies"
+                           Style="{StaticResource MutedTextStyle}"
+                           FontSize="10.5"
+                           TextWrapping="Wrap"
+                           Margin="8,12" />
+
+                <ListBox ItemsSource="{Binding NavigationItems}"
+                         SelectedItem="{Binding SelectedNavigation}"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         ScrollViewer.VerticalScrollBarVisibility="Auto">
+                    <ListBox.ItemContainerStyle>
+                        <Style TargetType="ListBoxItem">
+                            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                            <Setter Property="Padding" Value="0" />
+                            <Setter Property="Margin" Value="0,2" />
+                            <Setter Property="Background" Value="Transparent" />
+                            <Setter Property="BorderBrush" Value="Transparent" />
+                            <Setter Property="BorderThickness" Value="1" />
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="ListBoxItem">
+                                        <Border x:Name="Root"
+                                                Background="{TemplateBinding Background}"
+                                                BorderBrush="{TemplateBinding BorderBrush}"
+                                                BorderThickness="{TemplateBinding BorderThickness}"
+                                                CornerRadius="{DynamicResource SidebarItemCornerRadius}"
+                                                Padding="11,9">
+                                            <ContentPresenter />
+                                        </Border>
+                                        <ControlTemplate.Triggers>
+                                            <Trigger Property="IsMouseOver" Value="True">
+                                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource SidebarItemHoverBrush}" />
+                                            </Trigger>
+                                            <Trigger Property="IsSelected" Value="True">
+                                                <Setter TargetName="Root" Property="Background" Value="{DynamicResource SidebarItemSelectedBrush}" />
+                                                <Setter TargetName="Root" Property="BorderBrush" Value="{DynamicResource SidebarItemSelectedBorderBrush}" />
+                                            </Trigger>
+                                        </ControlTemplate.Triggers>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                        </Style>
+                    </ListBox.ItemContainerStyle>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="30" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Text="{Binding Glyph}"
+                                           FontFamily="Segoe Fluent Icons"
+                                           FontSize="17"
+                                           Foreground="{DynamicResource TextSecondaryBrush}"
+                                           VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding Title}"
+                                           FontSize="12.5"
+                                           FontWeight="SemiBold"
+                                           Foreground="{DynamicResource TextPrimaryBrush}"
+                                           VerticalAlignment="Center" />
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+        </Border>
+
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="76" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <Border Background="{DynamicResource TopBarBrush}"
+                    BorderBrush="{DynamicResource BorderBrush}"
+                    BorderThickness="0,0,0,1">
+                <Grid Margin="28,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="{Binding SelectedNavigation.Title}" Style="{StaticResource PageTitleStyle}" />
+                        <TextBlock Text="{Binding SelectedNavigation.Subtitle}" Style="{StaticResource MutedTextStyle}" Margin="0,3,0,0" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <ComboBox ItemsSource="{Binding UiLanguages}"
+                                  SelectedItem="{Binding SelectedLanguage}"
+                                  MinWidth="104"
+                                  Margin="0,0,10,0"
+                                  ToolTip="UI language" />
+                        <ComboBox ItemsSource="{Binding Themes}"
+                                  SelectedItem="{Binding SelectedTheme}"
+                                  MinWidth="104"
+                                  ToolTip="Appearance theme" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <Border Grid.Row="1" Background="{DynamicResource PageBackgroundBrush}" Padding="28">
+                <ContentControl Content="{Binding SelectedNavigation.Key}">
+                    <ContentControl.Style>
+                        <Style TargetType="ContentControl">
+                            <Setter Property="ContentTemplate" Value="{StaticResource ModuleTemplate}" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SelectedNavigation.Key}" Value="dashboard">
+                                    <Setter Property="ContentTemplate" Value="{StaticResource DashboardTemplate}" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ContentControl.Style>
+                </ContentControl>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>

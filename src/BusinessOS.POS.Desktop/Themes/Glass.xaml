@@ -1,0 +1,59 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Color x:Key="BrandPrimaryColor">#2F6BFF</Color>
+    <Color x:Key="BrandPrimaryDarkColor">#1D4ED8</Color>
+    <Color x:Key="BrandPrimarySoftColor">#E3EDFF</Color>
+    <Color x:Key="SuccessColor">#0E9F6E</Color>
+    <Color x:Key="DangerColor">#E02424</Color>
+    <Color x:Key="TextPrimaryColor">#0F172A</Color>
+    <Color x:Key="TextSecondaryColor">#44546A</Color>
+    <Color x:Key="TextMutedColor">#6B7A90</Color>
+    <Color x:Key="BorderColor">#E3EBF7</Color>
+    <Color x:Key="HoverColor">#EDF4FF</Color>
+    <Color x:Key="SelectedColor">#DCE9FF</Color>
+
+    <LinearGradientBrush x:Key="AppBackgroundBrush" StartPoint="0,0" EndPoint="1,1">
+        <GradientStop Color="#C3D9FF" Offset="0" />
+        <GradientStop Color="#E6F0FF" Offset="0.34" />
+        <GradientStop Color="#E4E9FF" Offset="0.62" />
+        <GradientStop Color="#D8D6FF" Offset="0.84" />
+        <GradientStop Color="#C6D5FF" Offset="1" />
+    </LinearGradientBrush>
+
+    <SolidColorBrush x:Key="BrandPrimaryBrush" Color="{StaticResource BrandPrimaryColor}" />
+    <SolidColorBrush x:Key="BrandPrimaryDarkBrush" Color="{StaticResource BrandPrimaryDarkColor}" />
+    <SolidColorBrush x:Key="BrandPrimarySoftBrush" Color="{StaticResource BrandPrimarySoftColor}" />
+    <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}" />
+    <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource DangerColor}" />
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimaryColor}" />
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondaryColor}" />
+    <SolidColorBrush x:Key="TextMutedBrush" Color="{StaticResource TextMutedColor}" />
+    <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource BorderColor}" />
+    <SolidColorBrush x:Key="HoverBrush" Color="{StaticResource HoverColor}" />
+    <SolidColorBrush x:Key="SelectedBrush" Color="{StaticResource SelectedColor}" />
+
+    <SolidColorBrush x:Key="SurfaceBrush" Color="#EBFFFFFF" />
+    <SolidColorBrush x:Key="SidebarBrush" Color="#AFFFFFFF" />
+    <SolidColorBrush x:Key="SurfaceMutedBrush" Color="#D6EDF4FF" />
+    <SolidColorBrush x:Key="TopBarBrush" Color="#BFFFFFFF" />
+    <SolidColorBrush x:Key="PageBackgroundBrush" Color="#68FFFFFF" />
+    <LinearGradientBrush x:Key="CardBackgroundBrush" StartPoint="0,0" EndPoint="0,1">
+        <GradientStop Color="#F7FFFFFF" Offset="0" />
+        <GradientStop Color="#E7FFFFFF" Offset="1" />
+    </LinearGradientBrush>
+    <SolidColorBrush x:Key="CardBorderBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="SidebarItemHoverBrush" Color="#73FFFFFF" />
+    <SolidColorBrush x:Key="SidebarItemSelectedBrush" Color="#2F6BFF" />
+    <SolidColorBrush x:Key="SidebarItemSelectedBorderBrush" Color="#2F6BFF" />
+
+    <CornerRadius x:Key="CardCornerRadius">18</CornerRadius>
+    <CornerRadius x:Key="ControlCornerRadius">10</CornerRadius>
+    <CornerRadius x:Key="SidebarItemCornerRadius">10</CornerRadius>
+
+    <DropShadowEffect x:Key="CardShadowEffect"
+                      BlurRadius="28"
+                      ShadowDepth="6"
+                      Direction="270"
+                      Opacity="0.16"
+                      Color="#1E3A8A" />
+</ResourceDictionary>

@@ -1,0 +1,46 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Color x:Key="BrandPrimaryColor">#0B82F6</Color>
+    <Color x:Key="BrandPrimaryDarkColor">#0B5FC6</Color>
+    <Color x:Key="BrandPrimarySoftColor">#DBECFF</Color>
+    <Color x:Key="SuccessColor">#059669</Color>
+    <Color x:Key="DangerColor">#DC2626</Color>
+    <Color x:Key="AppBackgroundColor">#F5F8FC</Color>
+    <Color x:Key="SurfaceColor">#FFFFFF</Color>
+    <Color x:Key="SidebarColor">#FFFFFF</Color>
+    <Color x:Key="SurfaceMutedColor">#F3F7FB</Color>
+    <Color x:Key="TextPrimaryColor">#0F172A</Color>
+    <Color x:Key="TextSecondaryColor">#475569</Color>
+    <Color x:Key="TextMutedColor">#64748B</Color>
+    <Color x:Key="BorderColor">#E2E8F0</Color>
+    <Color x:Key="HoverColor">#F1F5F9</Color>
+    <Color x:Key="SelectedColor">#DCEEFF</Color>
+
+    <SolidColorBrush x:Key="BrandPrimaryBrush" Color="{StaticResource BrandPrimaryColor}" />
+    <SolidColorBrush x:Key="BrandPrimaryDarkBrush" Color="{StaticResource BrandPrimaryDarkColor}" />
+    <SolidColorBrush x:Key="BrandPrimarySoftBrush" Color="{StaticResource BrandPrimarySoftColor}" />
+    <SolidColorBrush x:Key="SuccessBrush" Color="{StaticResource SuccessColor}" />
+    <SolidColorBrush x:Key="DangerBrush" Color="{StaticResource DangerColor}" />
+    <SolidColorBrush x:Key="AppBackgroundBrush" Color="{StaticResource AppBackgroundColor}" />
+    <SolidColorBrush x:Key="SurfaceBrush" Color="{StaticResource SurfaceColor}" />
+    <SolidColorBrush x:Key="SidebarBrush" Color="{StaticResource SidebarColor}" />
+    <SolidColorBrush x:Key="SurfaceMutedBrush" Color="{StaticResource SurfaceMutedColor}" />
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="{StaticResource TextPrimaryColor}" />
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="{StaticResource TextSecondaryColor}" />
+    <SolidColorBrush x:Key="TextMutedBrush" Color="{StaticResource TextMutedColor}" />
+    <SolidColorBrush x:Key="BorderBrush" Color="{StaticResource BorderColor}" />
+    <SolidColorBrush x:Key="HoverBrush" Color="{StaticResource HoverColor}" />
+    <SolidColorBrush x:Key="SelectedBrush" Color="{StaticResource SelectedColor}" />
+
+    <SolidColorBrush x:Key="TopBarBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="PageBackgroundBrush" Color="#F5F8FC" />
+    <SolidColorBrush x:Key="CardBackgroundBrush" Color="#FFFFFF" />
+    <SolidColorBrush x:Key="CardBorderBrush" Color="#E2E8F0" />
+    <SolidColorBrush x:Key="SidebarItemHoverBrush" Color="#F1F7FF" />
+    <SolidColorBrush x:Key="SidebarItemSelectedBrush" Color="#DDEEFF" />
+    <SolidColorBrush x:Key="SidebarItemSelectedBorderBrush" Color="#BFDBFE" />
+
+    <CornerRadius x:Key="CardCornerRadius">14</CornerRadius>
+    <CornerRadius x:Key="ControlCornerRadius">9</CornerRadius>
+    <CornerRadius x:Key="SidebarItemCornerRadius">9</CornerRadius>
+</ResourceDictionary>
