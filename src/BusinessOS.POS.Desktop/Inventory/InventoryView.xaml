@@ -1,0 +1,278 @@
+<UserControl x:Class="BusinessOS.POS.Desktop.Inventory.InventoryView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Loaded="OnLoaded">
+    <Grid>
+        <TabControl>
+            <TabItem Header="Stock Overview">
+                <Grid Margin="0,14,0,0">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="12" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Border Style="{StaticResource CardBorderStyle}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition />
+                                <ColumnDefinition Width="12" />
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="12" />
+                                <ColumnDefinition Width="110" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox Text="{Binding StockSearch, UpdateSourceTrigger=PropertyChanged}"
+                                     Height="38" Padding="10,0" VerticalContentAlignment="Center"
+                                     ToolTip="Search SKU or English/Dari/Pashto product name" />
+                            <CheckBox Grid.Column="2" Content="Low stock only"
+                                      IsChecked="{Binding LowStockOnly}" VerticalAlignment="Center" />
+                            <Button Grid.Column="4" Content="Refresh" Command="{Binding RefreshCommand}"
+                                    Style="{StaticResource PrimaryButtonStyle}" />
+                        </Grid>
+                    </Border>
+                    <Border Grid.Row="2" Style="{StaticResource CardBorderStyle}" Padding="0">
+                        <DataGrid ItemsSource="{Binding StockRows}" AutoGenerateColumns="False" IsReadOnly="True">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="SKU" Binding="{Binding Sku}" Width="110" />
+                                <DataGridTextColumn Header="Product" Binding="{Binding Name}" Width="*" />
+                                <DataGridTextColumn Header="Unit" Binding="{Binding BaseUnit}" Width="100" />
+                                <DataGridTextColumn Header="On Hand" Binding="{Binding StockOnHand, StringFormat=N2}" Width="90" />
+                                <DataGridTextColumn Header="Min" Binding="{Binding MinimumStock, StringFormat=N2}" Width="80" />
+                                <DataGridTextColumn Header="Reorder" Binding="{Binding ReorderQuantity, StringFormat=N2}" Width="85" />
+                                <DataGridCheckBoxColumn Header="Low" Binding="{Binding LowStock}" Width="58" />
+                                <DataGridTextColumn Header="Batches" Binding="{Binding BatchCount}" Width="72" />
+                                <DataGridTextColumn Header="Expired" Binding="{Binding ExpiredBatchCount}" Width="72" />
+                                <DataGridTextColumn Header="Expired Qty" Binding="{Binding ExpiredQuantity, StringFormat=N2}" Width="90" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Border>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="Opening & Adjustments">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="0,14,0,0">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition />
+                            <ColumnDefinition Width="18" />
+                            <ColumnDefinition />
+                        </Grid.ColumnDefinitions>
+
+                        <Border Style="{StaticResource CardBorderStyle}">
+                            <StackPanel>
+                                <TextBlock Text="Opening stock" Style="{StaticResource SectionTitleStyle}" />
+                                <TextBlock Text="For expiry-tracked products, batch number and expiry date are required."
+                                           Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" Margin="0,4,0,14" />
+                                <TextBlock Text="Product" Style="{StaticResource MutedTextStyle}" />
+                                <ComboBox ItemsSource="{Binding Products}" SelectedItem="{Binding SelectedOpeningProduct}"
+                                          DisplayMemberPath="Name" Margin="0,4,0,10" />
+                                <TextBlock Text="Source unit" Style="{StaticResource MutedTextStyle}" />
+                                <ComboBox ItemsSource="{Binding SelectedOpeningProduct.Units}" SelectedItem="{Binding SelectedOpeningUnit}"
+                                          DisplayMemberPath="Name" Margin="0,4,0,10" />
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="12" /><ColumnDefinition /></Grid.ColumnDefinitions>
+                                    <StackPanel>
+                                        <TextBlock Text="Quantity" Style="{StaticResource MutedTextStyle}" />
+                                        <TextBox Text="{Binding OpeningQuantity}" Margin="0,4,0,10" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="Unit cost (AFN)" Style="{StaticResource MutedTextStyle}" />
+                                        <TextBox Text="{Binding OpeningUnitCost}" Margin="0,4,0,10" />
+                                    </StackPanel>
+                                </Grid>
+                                <TextBlock Text="Batch number" Style="{StaticResource MutedTextStyle}" />
+                                <TextBox Text="{Binding OpeningBatchNumber}" Margin="0,4,0,10" />
+                                <Grid>
+                                    <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="12" /><ColumnDefinition /></Grid.ColumnDefinitions>
+                                    <StackPanel>
+                                        <TextBlock Text="Manufactured" Style="{StaticResource MutedTextStyle}" />
+                                        <DatePicker SelectedDate="{Binding OpeningManufacturedAt}" Margin="0,4,0,10" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Text="Expiry" Style="{StaticResource MutedTextStyle}" />
+                                        <DatePicker SelectedDate="{Binding OpeningExpiresAt}" Margin="0,4,0,10" />
+                                    </StackPanel>
+                                </Grid>
+                                <TextBlock Text="Notes" Style="{StaticResource MutedTextStyle}" />
+                                <TextBox Text="{Binding OpeningNotes}" AcceptsReturn="True" Height="64" Margin="0,4,0,14" />
+                                <Button Content="Record Opening Stock" Command="{Binding RecordOpeningStockCommand}"
+                                        Style="{StaticResource PrimaryButtonStyle}" Height="42"
+                                        IsEnabled="{Binding CanOpeningStock}" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Grid.Column="2" Style="{StaticResource CardBorderStyle}">
+                            <StackPanel>
+                                <TextBlock Text="Manual adjustment" Style="{StaticResource SectionTitleStyle}" />
+                                <TextBlock Text="Use for controlled corrections. Every adjustment creates an append-only stock movement."
+                                           Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" Margin="0,4,0,14" />
+                                <TextBlock Text="Product / batch target" Style="{StaticResource MutedTextStyle}" />
+                                <ComboBox ItemsSource="{Binding Targets}" SelectedItem="{Binding SelectedAdjustmentTarget}"
+                                          DisplayMemberPath="Display" Margin="0,4,0,10" />
+                                <TextBlock Text="Direction" Style="{StaticResource MutedTextStyle}" />
+                                <ComboBox ItemsSource="{Binding AdjustmentDirections}" SelectedItem="{Binding SelectedAdjustmentDirection}"
+                                          Margin="0,4,0,10" />
+                                <TextBlock Text="Quantity (base unit)" Style="{StaticResource MutedTextStyle}" />
+                                <TextBox Text="{Binding AdjustmentQuantity}" Margin="0,4,0,10" />
+                                <TextBlock Text="Reason" Style="{StaticResource MutedTextStyle}" />
+                                <TextBox Text="{Binding AdjustmentReason}" Margin="0,4,0,10" />
+                                <TextBlock Text="Notes" Style="{StaticResource MutedTextStyle}" />
+                                <TextBox Text="{Binding AdjustmentNotes}" AcceptsReturn="True" Height="64" Margin="0,4,0,14" />
+                                <Button Content="Post Adjustment" Command="{Binding AdjustStockCommand}"
+                                        Style="{StaticResource PrimaryButtonStyle}" Height="42"
+                                        IsEnabled="{Binding CanAdjust}" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </ScrollViewer>
+            </TabItem>
+
+            <TabItem Header="Stock Counts">
+                <Grid Margin="0,14,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="1.15*" />
+                        <ColumnDefinition Width="16" />
+                        <ColumnDefinition />
+                    </Grid.ColumnDefinitions>
+                    <Border Style="{StaticResource CardBorderStyle}">
+                        <StackPanel>
+                            <TextBlock Text="New stock count" Style="{StaticResource SectionTitleStyle}" />
+                            <TextBlock Text="Capture physical quantities first. Approval will refuse the count if stock changed afterward."
+                                       Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" Margin="0,4,0,12" />
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="8" /><ColumnDefinition Width="100" /><ColumnDefinition Width="8" /><ColumnDefinition Width="92" /></Grid.ColumnDefinitions>
+                                <ComboBox ItemsSource="{Binding Targets}" SelectedItem="{Binding SelectedCountTarget}" DisplayMemberPath="Display" />
+                                <TextBox Grid.Column="2" Text="{Binding NewCountPhysicalQuantity}" ToolTip="Physical base quantity" />
+                                <Button Grid.Column="4" Content="Add Line" Command="{Binding AddCountLineCommand}" Style="{StaticResource SecondaryButtonStyle}" />
+                            </Grid>
+                            <DataGrid ItemsSource="{Binding CountLines}" AutoGenerateColumns="False" CanUserAddRows="False"
+                                      MinHeight="180" Margin="0,10,0,10">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Target" Binding="{Binding Target.Display}" Width="*" IsReadOnly="True" />
+                                    <DataGridTextColumn Header="Expected" Binding="{Binding Target.ExpectedQuantityBase, StringFormat=N2}" Width="90" IsReadOnly="True" />
+                                    <DataGridTextColumn Header="Physical" Binding="{Binding PhysicalQuantityBase}" Width="90" />
+                                    <DataGridTemplateColumn Header="" Width="50">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Button Content="×"
+                                                        Command="{Binding DataContext.RemoveCountLineCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}" Style="{StaticResource SecondaryButtonStyle}"
+                                                        Width="32" MinWidth="32" Height="28" />
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                            <TextBox Text="{Binding CountNotes}" AcceptsReturn="True" Height="56" ToolTip="Count notes" Margin="0,0,0,10" />
+                            <Button Content="Create Draft Count" Command="{Binding CreateCountCommand}"
+                                    Style="{StaticResource PrimaryButtonStyle}" IsEnabled="{Binding CanCount}" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Grid.Column="2" Style="{StaticResource CardBorderStyle}" Padding="0">
+                        <Grid>
+                            <Grid.RowDefinitions><RowDefinition Height="*" /><RowDefinition Height="Auto" /></Grid.RowDefinitions>
+                            <DataGrid ItemsSource="{Binding StockCounts}" SelectedItem="{Binding SelectedStockCount}"
+                                      AutoGenerateColumns="False" IsReadOnly="True">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Number" Binding="{Binding Number}" Width="145" />
+                                    <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="85" />
+                                    <DataGridTextColumn Header="Lines" Binding="{Binding ItemCount}" Width="60" />
+                                    <DataGridTextColumn Header="Variance" Binding="{Binding AbsoluteVariance, StringFormat=N2}" Width="90" />
+                                    <DataGridTextColumn Header="Counted" Binding="{Binding CountedAt, StringFormat=g}" Width="145" />
+                                </DataGrid.Columns>
+                            </DataGrid>
+                            <Button Grid.Row="1" Content="Approve Selected Count"
+                                    Command="{Binding ApproveCountCommand}" Style="{StaticResource PrimaryButtonStyle}"
+                                    Margin="16" IsEnabled="{Binding CanApproveCount}" />
+                        </Grid>
+                    </Border>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="Write-offs">
+                <Grid Margin="0,14,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="1.1*" />
+                        <ColumnDefinition Width="16" />
+                        <ColumnDefinition />
+                    </Grid.ColumnDefinitions>
+                    <Border Style="{StaticResource CardBorderStyle}">
+                        <StackPanel>
+                            <TextBlock Text="Inventory write-off" Style="{StaticResource SectionTitleStyle}" />
+                            <TextBlock Text="Damage can write off available stock. Expiry write-off only accepts already-expired batches."
+                                       Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" Margin="0,4,0,12" />
+                            <TextBlock Text="Type" Style="{StaticResource MutedTextStyle}" />
+                            <ComboBox ItemsSource="{Binding WriteoffTypes}" SelectedItem="{Binding SelectedWriteoffType}" Margin="0,4,0,10" />
+                            <TextBlock Text="Reason" Style="{StaticResource MutedTextStyle}" />
+                            <TextBox Text="{Binding WriteoffReason}" Margin="0,4,0,10" />
+                            <Grid>
+                                <Grid.ColumnDefinitions><ColumnDefinition /><ColumnDefinition Width="8" /><ColumnDefinition Width="100" /><ColumnDefinition Width="8" /><ColumnDefinition Width="92" /></Grid.ColumnDefinitions>
+                                <ComboBox ItemsSource="{Binding Targets}" SelectedItem="{Binding SelectedWriteoffTarget}" DisplayMemberPath="Display" />
+                                <TextBox Grid.Column="2" Text="{Binding NewWriteoffQuantity}" ToolTip="Base quantity" />
+                                <Button Grid.Column="4" Content="Add Line" Command="{Binding AddWriteoffLineCommand}" Style="{StaticResource SecondaryButtonStyle}" />
+                            </Grid>
+                            <DataGrid ItemsSource="{Binding WriteoffLines}" AutoGenerateColumns="False" CanUserAddRows="False"
+                                      MinHeight="170" Margin="0,10,0,10">
+                                <DataGrid.Columns>
+                                    <DataGridTextColumn Header="Target" Binding="{Binding Target.Display}" Width="*" IsReadOnly="True" />
+                                    <DataGridTextColumn Header="Qty" Binding="{Binding QuantityBase}" Width="90" />
+                                    <DataGridTemplateColumn Header="" Width="50">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate>
+                                                <Button Content="×"
+                                                        Command="{Binding DataContext.RemoveWriteoffLineCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                        CommandParameter="{Binding}" Style="{StaticResource SecondaryButtonStyle}"
+                                                        Width="32" MinWidth="32" Height="28" />
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                </DataGrid.Columns>
+                            </DataGrid>
+                            <TextBox Text="{Binding WriteoffNotes}" AcceptsReturn="True" Height="54" ToolTip="Notes" Margin="0,0,0,10" />
+                            <Button Content="Post Write-off" Command="{Binding PostWriteoffCommand}"
+                                    Style="{StaticResource PrimaryButtonStyle}" IsEnabled="{Binding CanWriteoff}" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Grid.Column="2" Style="{StaticResource CardBorderStyle}" Padding="0">
+                        <DataGrid ItemsSource="{Binding Writeoffs}" AutoGenerateColumns="False" IsReadOnly="True">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Number" Binding="{Binding Number}" Width="145" />
+                                <DataGridTextColumn Header="Type" Binding="{Binding WriteoffType}" Width="85" />
+                                <DataGridTextColumn Header="Reason" Binding="{Binding Reason}" Width="*" />
+                                <DataGridTextColumn Header="Qty" Binding="{Binding TotalQuantity, StringFormat=N2}" Width="75" />
+                                <DataGridTextColumn Header="Cost" Binding="{Binding TotalCost, StringFormat=N2}" Width="90" />
+                                <DataGridTextColumn Header="Posted" Binding="{Binding PostedAt, StringFormat=g}" Width="145" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Border>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="Movement History">
+                <Border Style="{StaticResource CardBorderStyle}" Padding="0" Margin="0,14,0,0">
+                    <DataGrid ItemsSource="{Binding Movements}" AutoGenerateColumns="False" IsReadOnly="True">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Time" Binding="{Binding OccurredAt, StringFormat=g}" Width="145" />
+                            <DataGridTextColumn Header="SKU" Binding="{Binding Sku}" Width="105" />
+                            <DataGridTextColumn Header="Product" Binding="{Binding Product}" Width="*" />
+                            <DataGridTextColumn Header="Type" Binding="{Binding MovementType}" Width="105" />
+                            <DataGridTextColumn Header="Qty" Binding="{Binding QuantityBase, StringFormat=N2}" Width="80" />
+                            <DataGridTextColumn Header="Balance" Binding="{Binding BalanceAfter, StringFormat=N2}" Width="88" />
+                            <DataGridTextColumn Header="Batch" Binding="{Binding BatchNumber}" Width="105" />
+                            <DataGridTextColumn Header="Batch Bal." Binding="{Binding BatchBalanceAfter, StringFormat=N2}" Width="90" />
+                            <DataGridTextColumn Header="Cost" Binding="{Binding UnitCostBase, StringFormat=N4}" Width="82" />
+                            <DataGridTextColumn Header="Notes" Binding="{Binding Notes}" Width="1.2*" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Border>
+            </TabItem>
+        </TabControl>
+
+        <Border VerticalAlignment="Bottom" HorizontalAlignment="Right"
+                Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource BorderBrush}"
+                BorderThickness="1" CornerRadius="10" Padding="12,7" Margin="0,0,14,12">
+            <TextBlock Text="{Binding StatusMessage}" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" MaxWidth="520" />
+        </Border>
+    </Grid>
+</UserControl>
