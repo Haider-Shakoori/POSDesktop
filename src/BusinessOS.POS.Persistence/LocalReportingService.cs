@@ -1,5 +1,6 @@
 using BusinessOS.POS.Application.Abstractions.Authentication;
 using BusinessOS.POS.Application.Abstractions.Reporting;
+using BusinessOS.POS.Domain.Authentication;
 using BusinessOS.POS.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
 
