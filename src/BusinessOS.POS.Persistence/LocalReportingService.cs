@@ -69,7 +69,7 @@ public sealed class LocalReportingService(
             .Concat(returns.Select(x => x.SaleId))
             .Distinct()
             .ToList();
-        var relatedSales = relatedSaleIds.Count == 0
+        List<SaleEntity> relatedSales = relatedSaleIds.Count == 0
             ? []
             : await context.Sales.AsNoTracking()
                 .Where(x => relatedSaleIds.Contains(x.Id))
@@ -88,21 +88,21 @@ public sealed class LocalReportingService(
             .Distinct()
             .ToList();
 
-        var allItems = activeSaleIds.Count == 0
+        List<SaleItemEntity> allItems = activeSaleIds.Count == 0
             ? []
             : await context.SaleItems.AsNoTracking()
                 .Where(x => activeSaleIds.Contains(x.SaleId))
                 .ToListAsync(cancellationToken);
 
         var returnIds = returns.Select(x => x.Id).ToList();
-        var returnItems = returnIds.Count == 0
+        List<SaleReturnItemEntity> returnItems = returnIds.Count == 0
             ? []
             : await context.SaleReturnItems.AsNoTracking()
                 .Where(x => returnIds.Contains(x.SaleReturnId))
                 .ToListAsync(cancellationToken);
 
         var productIds = allItems.Select(x => x.ProductId).Distinct().ToList();
-        var products = productIds.Count == 0
+        List<ProductEntity> products = productIds.Count == 0
             ? []
             : await context.Products.AsNoTracking()
                 .Include(x => x.Category)
@@ -344,7 +344,7 @@ public sealed class LocalReportingService(
             .ToListAsync(cancellationToken);
         var dayMap = days.ToDictionary(x => x.Id);
         var dayIds = days.Select(x => x.Id).ToList();
-        var closures = dayIds.Count == 0
+        List<BusinessDayClosureEntity> closures = dayIds.Count == 0
             ? []
             : await context.BusinessDayClosures.AsNoTracking()
                 .Where(x => dayIds.Contains(x.BusinessDayId))
@@ -390,10 +390,10 @@ public sealed class LocalReportingService(
         if (filters.ProductId is not null || filters.CategoryId is not null)
         {
             var saleIds = sales.Select(x => x.Id).ToList();
-            var items = saleIds.Count == 0 ? [] : await context.SaleItems.AsNoTracking()
+            List<SaleItemEntity> items = saleIds.Count == 0 ? [] : await context.SaleItems.AsNoTracking()
                 .Where(x => saleIds.Contains(x.SaleId)).ToListAsync(cancellationToken);
             var productIds = items.Select(x => x.ProductId).Distinct().ToList();
-            var products = productIds.Count == 0 ? [] : await context.Products.AsNoTracking()
+            List<ProductEntity> products = productIds.Count == 0 ? [] : await context.Products.AsNoTracking()
                 .Where(x => productIds.Contains(x.Id)).ToListAsync(cancellationToken);
             var productMap = products.ToDictionary(x => x.Id);
             var matchingSaleIds = items.Where(x =>
