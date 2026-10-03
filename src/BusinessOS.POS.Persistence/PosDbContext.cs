@@ -9,6 +9,8 @@ public sealed class PosDbContext(DbContextOptions<PosDbContext> options) : DbCon
     public DbSet<RoleEntity> Roles => Set<RoleEntity>();
     public DbSet<PermissionEntity> Permissions => Set<PermissionEntity>();
     public DbSet<AuditLogEntity> AuditLogs => Set<AuditLogEntity>();
+    public DbSet<CategoryEntity> Categories => Set<CategoryEntity>();
+    public DbSet<BrandEntity> Brands => Set<BrandEntity>();
     public DbSet<UnitEntity> Units => Set<UnitEntity>();
     public DbSet<PaymentMethodEntity> PaymentMethods => Set<PaymentMethodEntity>();
     public DbSet<ProductEntity> Products => Set<ProductEntity>();
@@ -61,6 +63,19 @@ public sealed class PosDbContext(DbContextOptions<PosDbContext> options) : DbCon
         audit.HasIndex(x => x.CreatedAt);
         audit.HasIndex(x => x.ActorUserId);
 
+        var category = modelBuilder.Entity<CategoryEntity>();
+        category.ToTable("categories");
+        category.HasKey(x => x.Id);
+        category.Property(x => x.NameEn).HasMaxLength(160).IsRequired();
+        category.HasOne(x => x.Parent).WithMany().HasForeignKey(x => x.ParentId).OnDelete(DeleteBehavior.Restrict);
+        category.HasIndex(x => new { x.SortOrder, x.NameEn });
+
+        var brand = modelBuilder.Entity<BrandEntity>();
+        brand.ToTable("brands");
+        brand.HasKey(x => x.Id);
+        brand.Property(x => x.NameEn).HasMaxLength(160).IsRequired();
+        brand.HasIndex(x => x.NameEn).IsUnique();
+
         var unit = modelBuilder.Entity<UnitEntity>();
         unit.ToTable("units");
         unit.HasKey(x => x.Id);
@@ -79,11 +94,18 @@ public sealed class PosDbContext(DbContextOptions<PosDbContext> options) : DbCon
         product.Property(x => x.Sku).HasMaxLength(100).IsRequired();
         product.HasIndex(x => x.Sku).IsUnique();
         product.Property(x => x.NameEn).HasMaxLength(200).IsRequired();
+        product.Property(x => x.ShelfLocation).HasMaxLength(100);
+        product.Property(x => x.ImagePath).HasMaxLength(500);
+        product.HasOne(x => x.Category).WithMany().HasForeignKey(x => x.CategoryId).OnDelete(DeleteBehavior.SetNull);
+        product.HasOne(x => x.Brand).WithMany().HasForeignKey(x => x.BrandId).OnDelete(DeleteBehavior.SetNull);
+        product.HasOne(x => x.BaseUnit).WithMany().HasForeignKey(x => x.BaseUnitId).OnDelete(DeleteBehavior.Restrict);
         product.Property(x => x.PurchaseCost).HasPrecision(18, 4);
         product.Property(x => x.SellingPrice).HasPrecision(18, 2);
         product.Property(x => x.MinimumSellingPrice).HasPrecision(18, 2);
+        product.Property(x => x.WholesalePrice).HasPrecision(18, 2);
         product.Property(x => x.StockOnHand).HasPrecision(20, 6);
         product.Property(x => x.MinimumStock).HasPrecision(20, 6);
+        product.Property(x => x.ReorderQuantity).HasPrecision(20, 6);
 
         var productUnit = modelBuilder.Entity<ProductUnitEntity>();
         productUnit.ToTable("product_units");
@@ -91,6 +113,7 @@ public sealed class PosDbContext(DbContextOptions<PosDbContext> options) : DbCon
         productUnit.Property(x => x.ConversionFactor).HasPrecision(20, 6);
         productUnit.Property(x => x.SellingPrice).HasPrecision(18, 2);
         productUnit.Property(x => x.MinimumSellingPrice).HasPrecision(18, 2);
+        productUnit.Property(x => x.WholesalePrice).HasPrecision(18, 2);
         productUnit.HasIndex(x => new { x.ProductId, x.UnitId }).IsUnique();
         productUnit.HasOne(x => x.Product).WithMany(x => x.Units).HasForeignKey(x => x.ProductId).OnDelete(DeleteBehavior.Cascade);
         productUnit.HasOne(x => x.Unit).WithMany().HasForeignKey(x => x.UnitId).OnDelete(DeleteBehavior.Restrict);

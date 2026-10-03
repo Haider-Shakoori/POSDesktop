@@ -23,6 +23,16 @@ internal static class PosReferenceSeed
                 Unit("DOZ", "Dozen", "درجن", "درجن", "doz", 0));
         }
 
+        if (!await context.Categories.AnyAsync(cancellationToken))
+        {
+            context.Categories.AddRange(
+                new CategoryEntity { NameEn = "Grocery", NameFa = "مواد غذایی", NamePs = "خوراکي توکي", SortOrder = 10, IsActive = true },
+                new CategoryEntity { NameEn = "Beverages", NameFa = "نوشیدنی‌ها", NamePs = "څښاک", SortOrder = 20, IsActive = true },
+                new CategoryEntity { NameEn = "Dairy", NameFa = "لبنیات", NamePs = "لبنیات", SortOrder = 30, IsActive = true },
+                new CategoryEntity { NameEn = "Household", NameFa = "لوازم خانه", NamePs = "کورني توکي", SortOrder = 40, IsActive = true },
+                new CategoryEntity { NameEn = "Personal Care", NameFa = "مراقبت شخصی", NamePs = "شخصي پاملرنه", SortOrder = 50, IsActive = true });
+        }
+
         if (!await context.PaymentMethods.AnyAsync(cancellationToken))
         {
             context.PaymentMethods.AddRange(
@@ -77,6 +87,7 @@ internal static class PosReferenceSeed
                 NameEn = item.En,
                 NameFa = item.Fa,
                 NamePs = item.Ps,
+                BaseUnitId = units[item.Unit].Id,
                 PurchaseCost = item.Cost,
                 SellingPrice = item.Price,
                 MinimumSellingPrice = decimal.Round(item.Price * 0.85m, 2),
