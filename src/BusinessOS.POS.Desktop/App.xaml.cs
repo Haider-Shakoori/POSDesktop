@@ -4,6 +4,7 @@ using BusinessOS.POS.Application.Abstractions.Persistence;
 using BusinessOS.POS.Application.Abstractions.Storage;
 using BusinessOS.POS.Desktop.Authentication;
 using BusinessOS.POS.Desktop.Catalog;
+using BusinessOS.POS.Desktop.Inventory;
 using BusinessOS.POS.Desktop.Pos;
 using BusinessOS.POS.Infrastructure;
 using BusinessOS.POS.Persistence;
@@ -32,6 +33,7 @@ public partial class App : System.Windows.Application
                     services.AddTransient<OwnerSetupViewModel>();
                     services.AddTransient<PosViewModel>();
                     services.AddTransient<ProductCatalogViewModel>();
+                    services.AddTransient<InventoryViewModel>();
                     services.AddTransient<MainWindowViewModel>();
                 })
                 .Build();

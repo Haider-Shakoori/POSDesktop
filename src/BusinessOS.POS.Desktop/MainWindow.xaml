@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:pos="clr-namespace:BusinessOS.POS.Desktop.Pos"
         xmlns:catalog="clr-namespace:BusinessOS.POS.Desktop.Catalog"
+        xmlns:inventory="clr-namespace:BusinessOS.POS.Desktop.Inventory"
         Title="BusinessOS POS"
         Width="1440"
         Height="900"
@@ -119,6 +120,10 @@
 
         <DataTemplate x:Key="ProductCatalogTemplate">
             <catalog:ProductCatalogView DataContext="{Binding DataContext.Catalog, RelativeSource={RelativeSource AncestorType=Window}}" />
+        </DataTemplate>
+
+        <DataTemplate x:Key="InventoryTemplate">
+            <inventory:InventoryView DataContext="{Binding DataContext.Inventory, RelativeSource={RelativeSource AncestorType=Window}}" />
         </DataTemplate>
 
         <DataTemplate x:Key="ModuleTemplate">
@@ -280,6 +285,9 @@
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding SelectedNavigation.Key}" Value="products">
                                     <Setter Property="ContentTemplate" Value="{StaticResource ProductCatalogTemplate}" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectedNavigation.Key}" Value="inventory">
+                                    <Setter Property="ContentTemplate" Value="{StaticResource InventoryTemplate}" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
