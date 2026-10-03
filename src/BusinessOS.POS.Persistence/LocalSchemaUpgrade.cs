@@ -328,6 +328,16 @@ CREATE UNIQUE INDEX IF NOT EXISTS IX_stock_movements_IdempotencyKey
 ON stock_movements (IdempotencyKey)
 WHERE IdempotencyKey IS NOT NULL;
 """, cancellationToken);
+
+        await EnsureColumnAsync(context, "sale_payments", "TenderedAmount", "TEXT NOT NULL DEFAULT '0'", cancellationToken);
+        await EnsureColumnAsync(context, "sale_payments", "ChangeAmount", "TEXT NOT NULL DEFAULT '0'", cancellationToken);
+        await EnsureColumnAsync(context, "sale_payments", "Notes", "TEXT NULL", cancellationToken);
+
+        await context.Database.ExecuteSqlRawAsync("""
+UPDATE sale_payments
+SET TenderedAmount = Amount
+WHERE TenderedAmount = '0';
+""", cancellationToken);
     }
 
     private static async Task EnsureColumnAsync(

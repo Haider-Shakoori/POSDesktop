@@ -245,6 +245,8 @@ public sealed class PosDbContext(DbContextOptions<PosDbContext> options) : DbCon
         salePayment.ToTable("sale_payments");
         salePayment.HasKey(x => x.Id);
         salePayment.Property(x => x.Amount).HasPrecision(18, 2);
+        salePayment.Property(x => x.TenderedAmount).HasPrecision(18, 2);
+        salePayment.Property(x => x.ChangeAmount).HasPrecision(18, 2);
 
         var held = modelBuilder.Entity<HeldSaleEntity>();
         held.ToTable("held_sales");
