@@ -232,6 +232,15 @@ public sealed class LocalCustomerService(
         context.CustomerCollections.Add(collection);
         await context.SaveChangesAsync(cancellationToken);
 
+        if (method.IsCash)
+        {
+            await CashLedgerEngine.RecordAsync(
+                context, sessions.Current!.UserId, collection.Amount,
+                "inflow", "customer_collection", "customer_collection", collection.Id,
+                collection.Number, "Cash customer collection", collectedAt,
+                "customer-collection:" + collection.Id, null, cancellationToken);
+        }
+
         await CustomerLedgerWriter.CreditAsync(
             context, customer, amount, "collection", "collection", collection.Id,
             collection.Number, sessions.Current!.UserId, "Customer collection", cancellationToken);
