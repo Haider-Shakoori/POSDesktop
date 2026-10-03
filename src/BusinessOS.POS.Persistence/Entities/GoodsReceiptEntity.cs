@@ -9,6 +9,7 @@ public sealed class GoodsReceiptEntity
     public long? PurchaseOrderId { get; set; }
     public long CreatedByUserId { get; set; }
     public long PostedByUserId { get; set; }
+    public DateTime BusinessDate { get; set; }
     public string Status { get; set; } = "posted";
     public string? SupplierInvoiceReference { get; set; }
     public DateTimeOffset ReceivedAt { get; set; }

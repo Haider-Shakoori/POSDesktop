@@ -8,6 +8,7 @@ public sealed class CustomerCollectionEntity
     public long CustomerId { get; set; }
     public string PaymentMethodCode { get; set; } = string.Empty;
     public long RecordedByUserId { get; set; }
+    public DateTime BusinessDate { get; set; }
     public decimal Amount { get; set; }
     public decimal TenderedAmount { get; set; }
     public decimal ChangeAmount { get; set; }
