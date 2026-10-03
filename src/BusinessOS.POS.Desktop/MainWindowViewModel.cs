@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using BusinessOS.POS.Application.Abstractions.Authentication;
 using BusinessOS.POS.Desktop.Appearance;
 using BusinessOS.POS.Desktop.Navigation;
+using BusinessOS.POS.Desktop.Pos;
 using CommunityToolkit.Mvvm.ComponentModel;
 using WpfFlowDirection = System.Windows.FlowDirection;
 
@@ -14,9 +15,11 @@ public partial class MainWindowViewModel : ObservableObject
 
     public MainWindowViewModel(
         IUserSessionService sessions,
-        IPermissionAuthorizer authorizer)
+        IPermissionAuthorizer authorizer,
+        PosViewModel pos)
     {
         _sessions = sessions;
+        Pos = pos;
 
         var items = new[]
         {
@@ -60,6 +63,8 @@ public partial class MainWindowViewModel : ObservableObject
     }
 
     public ObservableCollection<NavigationItemViewModel> NavigationItems { get; }
+
+    public PosViewModel Pos { get; }
 
     public AppearanceTheme[] Themes { get; }
 
