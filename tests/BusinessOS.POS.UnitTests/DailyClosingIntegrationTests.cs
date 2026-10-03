@@ -100,7 +100,7 @@ public sealed class DailyClosingIntegrationTests
             var factory = provider.GetRequiredService<IDbContextFactory<PosDbContext>>();
             await using var verify = await factory.CreateDbContextAsync();
             Assert.Equal(60m, (await verify.Sales.AsNoTracking().SingleAsync(x => x.Id == sale.SaleId)).NetTotal);
-            Assert.Equal(100m, (await verify.GoodsReceipts.AsNoTracking().SingleAsync(x => x.Id == receipt.Summary.Id)).NetTotal);
+            Assert.Equal(100m, (await verify.GoodsReceipts.AsNoTracking().SingleAsync(x => x.Id == receipt.Header.Id)).NetTotal);
             Assert.Equal(8m, (await verify.Products.AsNoTracking().SingleAsync(x => x.Id == product.ProductId)).StockOnHand);
         }
         finally { Cleanup(root); }

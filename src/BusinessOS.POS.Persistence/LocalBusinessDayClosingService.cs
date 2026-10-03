@@ -265,7 +265,7 @@ public sealed class LocalBusinessDayClosingService(
         var operating = await context.OperatingEntries.AsNoTracking()
             .Where(x => x.OccurredAt >= start && x.OccurredAt < end)
             .ToListAsync(cancellationToken);
-        var cashMovements = shiftIds.Count == 0
+        List<CashMovementEntity> cashMovements = shiftIds.Count == 0
             ? []
             : await context.CashMovements.AsNoTracking()
                 .Where(x => shiftIds.Contains(x.CashierShiftId))
