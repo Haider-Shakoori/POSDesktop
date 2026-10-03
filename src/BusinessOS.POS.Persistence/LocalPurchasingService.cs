@@ -694,10 +694,13 @@ public sealed class LocalPurchasingService(
                 : "partially_received";
         }
 
-        await SupplierLedgerWriter.CreditAsync(
-            context, supplier, receipt.NetTotal,
-            "goods_receipt", "goods_receipt", receipt.Id, receipt.Number,
-            user.UserId, "Posted goods receipt " + receipt.Number, receivedAt, cancellationToken);
+        if (receipt.NetTotal > 0m)
+        {
+            await SupplierLedgerWriter.CreditAsync(
+                context, supplier, receipt.NetTotal,
+                "goods_receipt", "goods_receipt", receipt.Id, receipt.Number,
+                user.UserId, "Posted goods receipt " + receipt.Number, receivedAt, cancellationToken);
+        }
 
         if (paidAmount > 0m)
         {
@@ -895,10 +898,13 @@ public sealed class LocalPurchasingService(
             });
         }
 
-        await SupplierLedgerWriter.DebitAsync(
-            context, supplier, returnTotal,
-            "purchase_return", "purchase_return", purchaseReturn.Id, purchaseReturn.Number,
-            user.UserId, reason, now, cancellationToken);
+        if (returnTotal > 0m)
+        {
+            await SupplierLedgerWriter.DebitAsync(
+                context, supplier, returnTotal,
+                "purchase_return", "purchase_return", purchaseReturn.Id, purchaseReturn.Number,
+                user.UserId, reason, now, cancellationToken);
+        }
 
         receipt.ReturnedTotal = Money(receipt.ReturnedTotal + returnTotal);
         receipt.BalanceDue = Money(Math.Max(0m, receipt.NetTotal - receipt.PaidAmount - receipt.ReturnedTotal));
