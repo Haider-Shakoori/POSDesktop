@@ -3,6 +3,7 @@ using BusinessOS.POS.Application.Abstractions.Persistence;
 using BusinessOS.POS.Application.Abstractions.Sales;
 using BusinessOS.POS.Application.Abstractions.Storage;
 using BusinessOS.POS.Persistence;
+using Microsoft.Data.Sqlite;
 using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
@@ -56,6 +57,8 @@ public sealed class CorePosIntegrationTests
         }
         finally
         {
+            SqliteConnection.ClearAllPools();
+
             if (Directory.Exists(root))
             {
                 Directory.Delete(root, recursive: true);
@@ -96,6 +99,8 @@ public sealed class CorePosIntegrationTests
         }
         finally
         {
+            SqliteConnection.ClearAllPools();
+
             if (Directory.Exists(root))
             {
                 Directory.Delete(root, recursive: true);
