@@ -4,6 +4,8 @@ using BusinessOS.POS.Desktop.Appearance;
 using BusinessOS.POS.Desktop.Catalog;
 using BusinessOS.POS.Desktop.Cash;
 using BusinessOS.POS.Desktop.Closing;
+using BusinessOS.POS.Desktop.Dashboard;
+using BusinessOS.POS.Desktop.Reports;
 using BusinessOS.POS.Desktop.Expenses;
 using BusinessOS.POS.Desktop.Inventory;
 using BusinessOS.POS.Desktop.Customers;
@@ -24,6 +26,7 @@ public partial class MainWindowViewModel : ObservableObject
     public MainWindowViewModel(
         IUserSessionService sessions,
         IPermissionAuthorizer authorizer,
+        DashboardViewModel dashboard,
         PosViewModel pos,
         ProductCatalogViewModel catalog,
         InventoryViewModel inventory,
@@ -32,9 +35,11 @@ public partial class MainWindowViewModel : ObservableObject
         PurchasingViewModel purchasing,
         CashViewModel cash,
         DailyClosingViewModel closing,
-        ExpensesViewModel expenses)
+        ExpensesViewModel expenses,
+        ReportsViewModel reports)
     {
         _sessions = sessions;
+        Dashboard = dashboard;
         Pos = pos;
         Catalog = catalog;
         Inventory = inventory;
@@ -44,6 +49,7 @@ public partial class MainWindowViewModel : ObservableObject
         Cash = cash;
         Closing = closing;
         Expenses = expenses;
+        Reports = reports;
 
         var items = new[]
         {
@@ -88,6 +94,8 @@ public partial class MainWindowViewModel : ObservableObject
 
     public ObservableCollection<NavigationItemViewModel> NavigationItems { get; }
 
+    public DashboardViewModel Dashboard { get; }
+
     public PosViewModel Pos { get; }
 
     public ProductCatalogViewModel Catalog { get; }
@@ -105,6 +113,8 @@ public partial class MainWindowViewModel : ObservableObject
     public DailyClosingViewModel Closing { get; }
 
     public ExpensesViewModel Expenses { get; }
+
+    public ReportsViewModel Reports { get; }
 
     public AppearanceTheme[] Themes { get; }
 
