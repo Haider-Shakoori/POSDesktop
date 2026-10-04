@@ -36,8 +36,10 @@ public sealed record NetworkConfiguration
             if (string.IsNullOrWhiteSpace(ServerId))
                 throw new InvalidOperationException("A Client Terminal must remember the paired server identity.");
 
-            if (string.IsNullOrWhiteSpace(ServerCertificateSha256) ||
-                NormalizeFingerprint(ServerCertificateSha256).Length != 64)
+            var fingerprint = string.IsNullOrWhiteSpace(ServerCertificateSha256)
+                ? string.Empty
+                : NormalizeFingerprint(ServerCertificateSha256);
+            if (fingerprint.Length != 64 || fingerprint.Any(x => !Uri.IsHexDigit(x)))
                 throw new InvalidOperationException("A Client Terminal must remember a valid SHA-256 server certificate fingerprint.");
 
             if (string.IsNullOrWhiteSpace(TerminalId) ||
