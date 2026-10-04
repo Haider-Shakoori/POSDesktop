@@ -59,6 +59,7 @@ public sealed class PosDbContext(DbContextOptions<PosDbContext> options) : DbCon
     public DbSet<LanServerIdentityEntity> LanServerIdentities => Set<LanServerIdentityEntity>();
     public DbSet<RegisteredLanTerminalEntity> RegisteredLanTerminals => Set<RegisteredLanTerminalEntity>();
     public DbSet<LanPairingCodeEntity> LanPairingCodes => Set<LanPairingCodeEntity>();
+    public DbSet<LanUserSessionEntity> LanUserSessions => Set<LanUserSessionEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -420,6 +421,14 @@ public sealed class PosDbContext(DbContextOptions<PosDbContext> options) : DbCon
         lanPairing.Property(x => x.SaltBase64).HasMaxLength(128).IsRequired();
         lanPairing.Property(x => x.CodeHashBase64).HasMaxLength(128).IsRequired();
         lanPairing.HasIndex(x => x.ExpiresAt);
+
+        var lanSession = modelBuilder.Entity<LanUserSessionEntity>();
+        lanSession.ToTable("lan_user_sessions");
+        lanSession.HasKey(x => x.Id);
+        lanSession.Property(x => x.TokenHashBase64).HasMaxLength(128).IsRequired();
+        lanSession.Property(x => x.TerminalId).HasMaxLength(64).IsRequired();
+        lanSession.HasIndex(x => x.TokenHashBase64).IsUnique();
+        lanSession.HasIndex(x => new { x.TerminalId, x.ExpiresAt });
 
         var terminal = modelBuilder.Entity<TerminalEntity>();
         terminal.ToTable("terminals");

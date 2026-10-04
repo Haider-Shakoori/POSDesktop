@@ -44,20 +44,21 @@ public static class DependencyInjection
         services.AddSingleton<LoginAttemptThrottle>();
         services.AddSingleton<ILocalDatabaseInitializer, LocalDatabaseInitializer>();
         services.AddSingleton<IOwnerBootstrapService, OwnerBootstrapService>();
-        services.AddSingleton<IUserSessionService, LocalUserSessionService>();
-        services.AddSingleton<IPermissionAuthorizer, PermissionAuthorizer>();
-        services.AddSingleton<IPosService, LocalPosService>();
-        services.AddSingleton<ISalesService, LocalSalesService>();
-        services.AddSingleton<ISaleReturnService, LocalSaleReturnService>();
-        services.AddSingleton<ICustomerService, LocalCustomerService>();
-        services.AddSingleton<IProductCatalogService, LocalProductCatalogService>();
-        services.AddSingleton<IInventoryService, LocalInventoryService>();
-        services.AddSingleton<ICashManagementService, LocalCashManagementService>();
-        services.AddSingleton<IBusinessDayClosingService, LocalBusinessDayClosingService>();
-        services.AddSingleton<IDashboardService, LocalDashboardService>();
-        services.AddSingleton<IReportingService, LocalReportingService>();
+        services.AddScoped<IUserSessionService, LocalUserSessionService>();
+        services.AddScoped<IPermissionAuthorizer, PermissionAuthorizer>();
+        services.AddScoped<IPosService, LocalPosService>();
+        services.AddScoped<ISalesService, LocalSalesService>();
+        services.AddScoped<ISaleReturnService, LocalSaleReturnService>();
+        services.AddScoped<ICustomerService, LocalCustomerService>();
+        services.AddScoped<IProductCatalogService, LocalProductCatalogService>();
+        services.AddScoped<IInventoryService, LocalInventoryService>();
+        services.AddScoped<ICashManagementService, LocalCashManagementService>();
+        services.AddScoped<IBusinessDayClosingService, LocalBusinessDayClosingService>();
+        services.AddScoped<IDashboardService, LocalDashboardService>();
+        services.AddScoped<IReportingService, LocalReportingService>();
         services.AddSingleton<ILocalTerminalService, LocalTerminalService>();
-        services.AddSingleton<IPurchasingService, LocalPurchasingService>();
+        services.AddSingleton<ILanSessionStore, LanSessionStore>();
+        services.AddScoped<IPurchasingService, LocalPurchasingService>();
 
         return services;
     }

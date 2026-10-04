@@ -1071,6 +1071,22 @@ CREATE INDEX IF NOT EXISTS IX_lan_pairing_codes_ExpiresAt ON lan_pairing_codes (
 """, cancellationToken);
 
         await context.Database.ExecuteSqlRawAsync("""
+CREATE TABLE IF NOT EXISTS lan_user_sessions (
+    Id INTEGER NOT NULL CONSTRAINT PK_lan_user_sessions PRIMARY KEY AUTOINCREMENT,
+    TokenHashBase64 TEXT NOT NULL,
+    TerminalId TEXT NOT NULL,
+    UserId INTEGER NOT NULL,
+    CreatedAt TEXT NOT NULL,
+    ExpiresAt TEXT NOT NULL,
+    RevokedAt TEXT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_lan_user_sessions_TokenHashBase64
+ON lan_user_sessions (TokenHashBase64);
+CREATE INDEX IF NOT EXISTS IX_lan_user_sessions_terminal_expiry
+ON lan_user_sessions (TerminalId, ExpiresAt);
+""", cancellationToken);
+
+        await context.Database.ExecuteSqlRawAsync("""
 UPDATE sales
 SET BalanceDue = CASE
     WHEN CAST(NetTotal AS REAL) > CAST(PaidAmount AS REAL)
