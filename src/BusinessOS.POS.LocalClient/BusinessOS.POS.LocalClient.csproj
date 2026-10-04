@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>BusinessOS.POS.LocalClient</AssemblyName>
+    <RootNamespace>BusinessOS.POS.LocalClient</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\BusinessOS.POS.Application\BusinessOS.POS.Application.csproj" />
+    <ProjectReference Include="..\BusinessOS.POS.Domain\BusinessOS.POS.Domain.csproj" />
+    <ProjectReference Include="..\BusinessOS.POS.Infrastructure\BusinessOS.POS.Infrastructure.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.12" />
+  </ItemGroup>
+</Project>

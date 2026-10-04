@@ -1,0 +1,86 @@
+<Window x:Class="BusinessOS.POS.Desktop.Networking.DeploymentSetupWindow"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ Title="BusinessOS POS — Deployment Setup"
+ Width="920" Height="690" MinWidth="820" MinHeight="620"
+ WindowStartupLocation="CenterScreen"
+ Background="{DynamicResource AppBackgroundBrush}">
+ <Grid Margin="26">
+  <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="18"/><RowDefinition Height="*"/><RowDefinition Height="14"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+  <StackPanel>
+   <TextBlock Text="How should this computer run BusinessOS POS?" Style="{StaticResource PageTitleStyle}"/>
+   <TextBlock Text="You can run independently, host the authoritative LAN database, or securely pair this PC as a client terminal." Style="{StaticResource MutedTextStyle}" Margin="0,6,0,0" TextWrapping="Wrap"/>
+  </StackPanel>
+
+  <TabControl Grid.Row="2">
+   <TabItem Header="Standalone">
+    <Border Style="{StaticResource CardBorderStyle}" Margin="12">
+     <StackPanel>
+      <TextBlock Text="Standalone POS" Style="{StaticResource SectionTitleStyle}"/>
+      <TextBlock Text="Best for one computer. The database stays only on this PC and the application works fully offline." Style="{StaticResource BodyTextStyle}" TextWrapping="Wrap" Margin="0,8,0,18"/>
+      <Button Content="Use Standalone Mode" Click="OnStandaloneClick" Style="{StaticResource PrimaryButtonStyle}" Width="210" HorizontalAlignment="Left"/>
+     </StackPanel>
+    </Border>
+   </TabItem>
+
+   <TabItem Header="Main Server">
+    <Border Style="{StaticResource CardBorderStyle}" Margin="12">
+     <StackPanel>
+      <TextBlock Text="Main POS Server" Style="{StaticResource SectionTitleStyle}"/>
+      <TextBlock Text="This PC owns the only SQLite database. Other PCs connect over certificate-pinned HTTPS; the database file is never shared." Style="{StaticResource BodyTextStyle}" TextWrapping="Wrap" Margin="0,8,0,18"/>
+      <TextBlock Text="Server name" Style="{StaticResource MutedTextStyle}"/>
+      <TextBox Text="{Binding ServerName}" Width="360" HorizontalAlignment="Left" Margin="0,4,0,12"/>
+      <Button Content="Configure as Main Server" Click="OnServerClick" Style="{StaticResource PrimaryButtonStyle}" Width="220" HorizontalAlignment="Left"/>
+     </StackPanel>
+    </Border>
+   </TabItem>
+
+   <TabItem Header="Client Terminal">
+    <Grid Margin="12">
+     <Grid.ColumnDefinitions><ColumnDefinition Width="1.35*"/><ColumnDefinition Width="14"/><ColumnDefinition/></Grid.ColumnDefinitions>
+     <Border Style="{StaticResource CardBorderStyle}" Padding="0">
+      <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+       <Grid Margin="16"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="110"/></Grid.ColumnDefinitions>
+        <StackPanel><TextBlock Text="Find Main POS Server" Style="{StaticResource SectionTitleStyle}"/>
+         <TextBlock Text="Discovery is local-LAN only." Style="{StaticResource MutedTextStyle}"/></StackPanel>
+        <Button Grid.Column="1" Content="Discover" Click="OnDiscoverClick" Style="{StaticResource SecondaryButtonStyle}"/>
+       </Grid>
+       <DataGrid Grid.Row="1" ItemsSource="{Binding Servers}" SelectedItem="{Binding SelectedServer}" AutoGenerateColumns="False" IsReadOnly="True">
+        <DataGrid.Columns>
+         <DataGridTextColumn Header="Server" Binding="{Binding ServerName}" Width="*"/>
+         <DataGridTextColumn Header="Host" Binding="{Binding HostName}" Width="130"/>
+         <DataGridTextColumn Header="Port" Binding="{Binding Port}" Width="70"/>
+        </DataGrid.Columns>
+       </DataGrid>
+      </Grid>
+     </Border>
+     <Border Grid.Column="2" Style="{StaticResource CardBorderStyle}">
+      <StackPanel>
+       <TextBlock Text="Pair this workstation" Style="{StaticResource SectionTitleStyle}"/>
+       <TextBlock Text="Ask the server administrator for the current one-time six-digit pairing code." Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" Margin="0,5,0,14"/>
+       <TextBlock Text="Terminal name" Style="{StaticResource MutedTextStyle}"/><TextBox Text="{Binding TerminalName}" Margin="0,4,0,8"/>
+       <TextBlock Text="Terminal role" Style="{StaticResource MutedTextStyle}"/><TextBox Text="{Binding TerminalRole}" Margin="0,4,0,8"/>
+       <TextBlock Text="Pairing code" Style="{StaticResource MutedTextStyle}"/><TextBox Text="{Binding PairingCode}" Margin="0,4,0,8"/>
+       <Expander Header="Manual server fallback" Margin="0,2,0,8">
+        <StackPanel Margin="0,8,0,0">
+         <TextBlock Text="If discovery is unavailable, enter the server details exactly as shown on the Main POS Server." Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap"/>
+         <TextBox Text="{Binding ManualServerName}" ToolTip="Server name" Margin="0,6,0,0"/>
+         <TextBox Text="{Binding ManualServerHost}" ToolTip="Server host or IP" Margin="0,6,0,0"/>
+         <TextBox Text="{Binding ManualServerPort}" ToolTip="Server port" Margin="0,6,0,0"/>
+         <TextBox Text="{Binding ManualServerId}" ToolTip="Server UUID" Margin="0,6,0,0"/>
+         <TextBox Text="{Binding ManualCertificateSha256}" ToolTip="Certificate SHA-256 fingerprint" Margin="0,6,0,0"/>
+         <Button Content="Use Manual Server" Click="OnUseManualServerClick" Style="{StaticResource SecondaryButtonStyle}" Margin="0,8,0,0"/>
+        </StackPanel>
+       </Expander>
+       <Button Content="Pair &amp; Use Client Mode" Click="OnPairClick" Style="{StaticResource PrimaryButtonStyle}"/>
+      </StackPanel>
+     </Border>
+    </Grid>
+   </TabItem>
+  </TabControl>
+
+  <Border Grid.Row="4" Background="{DynamicResource BrandPrimarySoftBrush}" CornerRadius="10" Padding="12">
+   <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource BrandPrimaryDarkBrush}" TextWrapping="Wrap"/>
+  </Border>
+ </Grid>
+</Window>
