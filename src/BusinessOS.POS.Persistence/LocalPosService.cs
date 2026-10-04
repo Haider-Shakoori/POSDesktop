@@ -194,7 +194,8 @@ public sealed class LocalPosService(
                 .FirstOrDefaultAsync(cancellationToken);
         }
 
-        terminal ??= throw new InvalidOperationException("No active POS terminal is configured for this workstation.");
+        if (terminal is null)
+            throw new InvalidOperationException("No active POS terminal is configured for this workstation.");
 
         if (await context.CashierShifts.AnyAsync(
             x => x.TerminalId == terminal.Id && x.Status == "open", cancellationToken))

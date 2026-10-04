@@ -142,10 +142,10 @@ public sealed class LocalTerminalService(IDbContextFactory<PosDbContext> context
         else
         {
             var codeSuffix = request.TerminalId.Replace("-", string.Empty)[..8].ToUpperInvariant();
-            var code = "LAN-" + codeSuffix;
+            var cashCode = "LAN-" + codeSuffix;
             cashTerminal = await context.Terminals.SingleOrDefaultAsync(
-                x => x.Code == code, cancellationToken)
-                ?? new TerminalEntity { Code = code, Name = name, IsActive = true };
+                x => x.Code == cashCode, cancellationToken)
+                ?? new TerminalEntity { Code = cashCode, Name = name, IsActive = true };
 
             if (cashTerminal.Id == 0)
                 context.Terminals.Add(cashTerminal);

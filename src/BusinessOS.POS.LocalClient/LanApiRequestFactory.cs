@@ -34,12 +34,14 @@ public sealed class LanApiRequestFactory(
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(relativeUri);
         if (relativeUri.StartsWith("/", StringComparison.Ordinal) ||
-            relativeUri.StartsWith("\", StringComparison.Ordinal) ||
-            relativeUri.Contains("\", StringComparison.Ordinal) ||
+            relativeUri.StartsWith("\\", StringComparison.Ordinal) ||
+            relativeUri.Contains("\\", StringComparison.Ordinal) ||
             relativeUri.Contains("../", StringComparison.Ordinal) ||
             relativeUri.Contains("/..", StringComparison.Ordinal) ||
             Uri.TryCreate(relativeUri, UriKind.Absolute, out _) ||
             !Uri.TryCreate(relativeUri, UriKind.Relative, out _))
+        {
             throw new InvalidOperationException("LAN API calls must use safe relative server paths.");
+        }
     }
 }
