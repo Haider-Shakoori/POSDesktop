@@ -4,24 +4,24 @@ using System.Text;
 using System.Text.Json;
 using BusinessOS.POS.Application.Abstractions.Networking;
 using BusinessOS.POS.Infrastructure.Networking;
+using BusinessOS.POS.LocalServer.Runtime;
 
 namespace BusinessOS.POS.LocalServer.Discovery;
 
 public sealed class UdpDiscoveryResponder(
-    NetworkConfiguration configuration,
-    LocalServerIdentity identity,
-    string certificateSha256,
+    LanServerRuntimeState runtime,
     ILogger<UdpDiscoveryResponder> logger) : BackgroundService
 {
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (!configuration.DiscoveryEnabled) return;
+        var state = runtime.Require();
+        if (!state.Configuration.DiscoveryEnabled) return;
 
         using var udp = new UdpClient(AddressFamily.InterNetwork);
         udp.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-        udp.Client.Bind(new IPEndPoint(IPAddress.Any, configuration.DiscoveryPort));
+        udp.Client.Bind(new IPEndPoint(IPAddress.Any, state.Configuration.DiscoveryPort));
 
         while (!stoppingToken.IsCancellationRequested)
         {
@@ -32,8 +32,10 @@ public sealed class UdpDiscoveryResponder(
                 if (!string.Equals(text, UdpLocalServerDiscovery.DiscoveryRequest, StringComparison.Ordinal)) continue;
 
                 var ad = new LocalServerDiscoveryAdvertisement(
-                    "BusinessOS.POS.LocalServer", "v1", identity.ServerId, identity.ServerName,
-                    Environment.MachineName, configuration.ServerPort, certificateSha256);
+                    "BusinessOS.POS.LocalServer", "v1",
+                    state.Identity.ServerId, state.Identity.ServerName,
+                    Environment.MachineName, state.Configuration.ServerPort,
+                    state.CertificateSha256);
                 var payload = JsonSerializer.SerializeToUtf8Bytes(ad, JsonOptions);
                 await udp.SendAsync(payload, message.RemoteEndPoint, stoppingToken);
             }
