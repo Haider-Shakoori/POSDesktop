@@ -1,6 +1,7 @@
 using System.Windows;
 using BusinessOS.POS.Application.Abstractions.Authentication;
 using BusinessOS.POS.Application.Abstractions.Persistence;
+using BusinessOS.POS.Application.Abstractions.Networking;
 using BusinessOS.POS.Application.Abstractions.Storage;
 using BusinessOS.POS.Desktop.Authentication;
 using BusinessOS.POS.Desktop.Catalog;
@@ -10,11 +11,14 @@ using BusinessOS.POS.Desktop.Dashboard;
 using BusinessOS.POS.Desktop.Reports;
 using BusinessOS.POS.Desktop.Expenses;
 using BusinessOS.POS.Desktop.Inventory;
+using BusinessOS.POS.Desktop.Networking;
 using BusinessOS.POS.Desktop.Customers;
 using BusinessOS.POS.Desktop.Sales;
 using BusinessOS.POS.Desktop.Pos;
 using BusinessOS.POS.Desktop.Purchasing;
 using BusinessOS.POS.Infrastructure;
+using BusinessOS.POS.Infrastructure.Networking;
+using BusinessOS.POS.LocalClient;
 using BusinessOS.POS.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -32,11 +36,31 @@ public partial class App : System.Windows.Application
 
         try
         {
+            var paths = new ApplicationPaths();
+            paths.EnsureCreated();
+            var networkStore = new NetworkConfigurationStore(paths);
+            var networkConfiguration = await networkStore.LoadAsync();
+            var secretStore = new WindowsNetworkSecretStore(paths);
+            var clientMode = networkConfiguration.Mode == DeploymentMode.Client &&
+                             networkConfiguration.IsConfigured;
+
             _host = Host.CreateDefaultBuilder()
                 .ConfigureServices(services =>
                 {
-                    services.AddSingleton<IApplicationPaths, ApplicationPaths>();
-                    services.AddBusinessOSPosPersistence();
+                    services.AddSingleton<IApplicationPaths>(paths);
+                    services.AddSingleton<INetworkConfigurationStore>(networkStore);
+                    services.AddSingleton<INetworkSecretStore>(secretStore);
+                    services.AddSingleton<ILocalServerDiscovery, UdpLocalServerDiscovery>();
+
+                    if (clientMode)
+                    {
+                        services.AddBusinessOSPosLocalClient();
+                    }
+                    else
+                    {
+                        services.AddBusinessOSPosPersistence();
+                        services.AddSingleton<LanTerminalPairingClient>();
+                    }
                     services.AddTransient<LoginViewModel>();
                     services.AddTransient<OwnerSetupViewModel>();
                     services.AddTransient<PosViewModel>();
@@ -50,6 +74,7 @@ public partial class App : System.Windows.Application
                     services.AddTransient<DashboardViewModel>();
                     services.AddTransient<ReportsViewModel>();
                     services.AddTransient<ExpensesViewModel>();
+                    services.AddTransient<TerminalsViewModel>();
                     services.AddSingleton<IReceiptPrintService, WpfReceiptPrintService>();
                     services.AddTransient<MainWindowViewModel>();
                 })
@@ -57,19 +82,22 @@ public partial class App : System.Windows.Application
 
             await _host.StartAsync();
 
-            var initializer = _host.Services.GetRequiredService<ILocalDatabaseInitializer>();
-            await initializer.InitializeAsync();
-
-            var bootstrap = _host.Services.GetRequiredService<IOwnerBootstrapService>();
-            if (!await bootstrap.HasAnyUsersAsync())
+            if (!clientMode)
             {
-                var setup = new OwnerSetupWindow(
-                    _host.Services.GetRequiredService<OwnerSetupViewModel>());
+                var initializer = _host.Services.GetRequiredService<ILocalDatabaseInitializer>();
+                await initializer.InitializeAsync();
 
-                if (setup.ShowDialog() != true)
+                var bootstrap = _host.Services.GetRequiredService<IOwnerBootstrapService>();
+                if (!await bootstrap.HasAnyUsersAsync())
                 {
-                    Shutdown();
-                    return;
+                    var setup = new OwnerSetupWindow(
+                        _host.Services.GetRequiredService<OwnerSetupViewModel>());
+
+                    if (setup.ShowDialog() != true)
+                    {
+                        Shutdown();
+                        return;
+                    }
                 }
             }
 
