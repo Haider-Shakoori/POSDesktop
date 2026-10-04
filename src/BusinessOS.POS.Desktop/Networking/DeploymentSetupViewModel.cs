@@ -17,6 +17,11 @@ public sealed partial class DeploymentSetupViewModel(
     [ObservableProperty] private string pairingCode = string.Empty;
     [ObservableProperty] private string terminalName = Environment.MachineName + " POS";
     [ObservableProperty] private string terminalRole = "POS Terminal";
+    [ObservableProperty] private string manualServerName = "Main POS Server";
+    [ObservableProperty] private string manualServerHost = string.Empty;
+    [ObservableProperty] private int manualServerPort = NetworkConfiguration.DefaultServerPort;
+    [ObservableProperty] private string manualServerId = string.Empty;
+    [ObservableProperty] private string manualCertificateSha256 = string.Empty;
     [ObservableProperty] private string statusMessage = "Choose how this computer will run BusinessOS POS.";
     [ObservableProperty] private bool isBusy;
 
@@ -64,6 +69,37 @@ public sealed partial class DeploymentSetupViewModel(
                 ? "No POS server answered local discovery."
                 : Servers.Count + " server(s) found.";
         });
+    }
+
+    public void UseManualServer()
+    {
+        var host = ManualServerHost.Trim();
+        var serverId = ManualServerId.Trim();
+        var fingerprint = ManualCertificateSha256
+            .Replace(":", string.Empty)
+            .Replace(" ", string.Empty)
+            .Trim()
+            .ToUpperInvariant();
+
+        if (string.IsNullOrWhiteSpace(host))
+            throw new InvalidOperationException("Enter the Main POS Server host or IP address.");
+        if (!Guid.TryParse(serverId, out _))
+            throw new InvalidOperationException("Enter the server UUID shown on the Main POS Server.");
+        if (ManualServerPort is < 1024 or > 65535)
+            throw new InvalidOperationException("The server port must be between 1024 and 65535.");
+        if (fingerprint.Length != 64 || fingerprint.Any(ch => !Uri.IsHexDigit(ch)))
+            throw new InvalidOperationException("Enter the 64-character SHA-256 certificate fingerprint shown on the Main POS Server.");
+
+        var manual = new LocalServerDiscoveryAdvertisement(
+            "BusinessOS.POS.LocalServer", "v1", serverId,
+            string.IsNullOrWhiteSpace(ManualServerName) ? "Main POS Server" : ManualServerName.Trim(),
+            host, ManualServerPort, fingerprint);
+
+        var existing = Servers.FirstOrDefault(x => x.ServerId == manual.ServerId);
+        if (existing is not null) Servers.Remove(existing);
+        Servers.Insert(0, manual);
+        SelectedServer = manual;
+        StatusMessage = "Manual server selected. Verify its identity and fingerprint before pairing.";
     }
 
     public async Task PairClientAsync()

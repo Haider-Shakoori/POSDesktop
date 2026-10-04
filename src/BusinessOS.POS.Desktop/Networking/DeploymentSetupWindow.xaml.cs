@@ -30,6 +30,12 @@ public partial class DeploymentSetupWindow : Window
         catch { }
     }
 
+    private void OnUseManualServerClick(object sender, RoutedEventArgs e)
+    {
+        try { Vm.UseManualServer(); }
+        catch (Exception ex) { Vm.StatusMessage = ex.Message; }
+    }
+
     private async void OnPairClick(object sender, RoutedEventArgs e)
     {
         try { await Vm.PairClientAsync(); DialogResult = true; }
