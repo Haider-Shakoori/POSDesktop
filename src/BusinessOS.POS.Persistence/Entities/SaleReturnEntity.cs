@@ -7,6 +7,7 @@ public sealed class SaleReturnEntity
     public string IdempotencyKey { get; set; } = string.Empty;
     public long SaleId { get; set; }
     public long CreatedByUserId { get; set; }
+    public DateTime BusinessDate { get; set; }
     public string Type { get; set; } = "return";
     public string Status { get; set; } = "posted";
     public string Reason { get; set; } = string.Empty;

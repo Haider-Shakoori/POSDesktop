@@ -9,6 +9,7 @@ public sealed class SaleEntity
     public long CashierUserId { get; set; }
     public long? CashierShiftId { get; set; }
     public long? CustomerId { get; set; }
+    public DateTime BusinessDate { get; set; }
     public string Status { get; set; } = "completed";
     public string PaymentStatus { get; set; } = "paid";
     public string CustomerNameSnapshot { get; set; } = "Walk-in Customer";

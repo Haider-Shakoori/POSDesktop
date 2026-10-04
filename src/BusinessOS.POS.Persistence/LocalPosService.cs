@@ -155,6 +155,8 @@ public sealed class LocalPosService(
         var user = RequireUser();
         await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
         await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+        var shiftBusinessDate = BusinessDayGuard.LocalBusinessDate(DateTimeOffset.UtcNow);
+        await BusinessDayGuard.EnsureOpenAsync(context, shiftBusinessDate, cancellationToken);
 
         var existing = await context.CashierShifts
             .Where(x => x.UserId == user.UserId && x.Status == "open")
@@ -182,7 +184,7 @@ public sealed class LocalPosService(
         {
             TerminalId = terminal.Id,
             UserId = user.UserId,
-            BusinessDate = DateTime.Today,
+            BusinessDate = shiftBusinessDate,
             OpenIdempotencyKey = Guid.NewGuid().ToString(),
             OpeningCash = Money(openingCash),
             ExpectedCash = Money(openingCash),
@@ -441,6 +443,7 @@ public sealed class LocalPosService(
         }
 
         var soldAt = DateTimeOffset.UtcNow;
+        await BusinessDayGuard.EnsureOpenAsync(context, soldAt, cancellationToken);
         var sale = new SaleEntity
         {
             Number = await NextNumberAsync(context, "sale", "SAL", soldAt, cancellationToken),
@@ -449,6 +452,7 @@ public sealed class LocalPosService(
             CashierUserId = user.UserId,
             CashierShiftId = shift?.Id,
             CustomerId = customer?.Id,
+            BusinessDate = BusinessDayGuard.LocalBusinessDate(soldAt),
             CustomerNameSnapshot = customer?.Name ?? "Walk-in Customer",
             Subtotal = subtotal,
             LineDiscountTotal = lineDiscountTotal,

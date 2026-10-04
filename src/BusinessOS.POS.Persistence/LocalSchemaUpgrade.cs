@@ -922,6 +922,114 @@ SET ExpectedCash = COALESCE((
 ), OpeningCash);
 """, cancellationToken);
 
+        await EnsureColumnAsync(context, "sales", "BusinessDate", "TEXT NOT NULL DEFAULT '0001-01-01 00:00:00'", cancellationToken);
+        await EnsureColumnAsync(context, "sale_returns", "BusinessDate", "TEXT NOT NULL DEFAULT '0001-01-01 00:00:00'", cancellationToken);
+        await EnsureColumnAsync(context, "customer_collections", "BusinessDate", "TEXT NOT NULL DEFAULT '0001-01-01 00:00:00'", cancellationToken);
+        await EnsureColumnAsync(context, "goods_receipts", "BusinessDate", "TEXT NOT NULL DEFAULT '0001-01-01 00:00:00'", cancellationToken);
+        await EnsureColumnAsync(context, "purchase_returns", "BusinessDate", "TEXT NOT NULL DEFAULT '0001-01-01 00:00:00'", cancellationToken);
+        await EnsureColumnAsync(context, "purchase_payments", "BusinessDate", "TEXT NOT NULL DEFAULT '0001-01-01 00:00:00'", cancellationToken);
+        await EnsureColumnAsync(context, "supplier_payments", "BusinessDate", "TEXT NOT NULL DEFAULT '0001-01-01 00:00:00'", cancellationToken);
+        await EnsureColumnAsync(context, "operating_entries", "BusinessDate", "TEXT NOT NULL DEFAULT '0001-01-01 00:00:00'", cancellationToken);
+
+        await context.Database.ExecuteSqlRawAsync("""
+UPDATE cashier_shifts
+SET BusinessDate = date(OpenedAt, '+4 hours', '+30 minutes') || ' 00:00:00'
+WHERE OpenedAt IS NOT NULL;
+
+UPDATE sales SET BusinessDate = date(SoldAt, '+4 hours', '+30 minutes') || ' 00:00:00' WHERE BusinessDate LIKE '0001-01-01%';
+UPDATE sale_returns SET BusinessDate = date(PostedAt, '+4 hours', '+30 minutes') || ' 00:00:00' WHERE BusinessDate LIKE '0001-01-01%';
+UPDATE customer_collections SET BusinessDate = date(CollectedAt, '+4 hours', '+30 minutes') || ' 00:00:00' WHERE BusinessDate LIKE '0001-01-01%';
+UPDATE goods_receipts SET BusinessDate = date(ReceivedAt, '+4 hours', '+30 minutes') || ' 00:00:00' WHERE BusinessDate LIKE '0001-01-01%';
+UPDATE purchase_returns SET BusinessDate = date(PostedAt, '+4 hours', '+30 minutes') || ' 00:00:00' WHERE BusinessDate LIKE '0001-01-01%';
+UPDATE purchase_payments SET BusinessDate = date(PaidAt, '+4 hours', '+30 minutes') || ' 00:00:00' WHERE BusinessDate LIKE '0001-01-01%';
+UPDATE supplier_payments SET BusinessDate = date(PaidAt, '+4 hours', '+30 minutes') || ' 00:00:00' WHERE BusinessDate LIKE '0001-01-01%';
+UPDATE operating_entries SET BusinessDate = date(OccurredAt, '+4 hours', '+30 minutes') || ' 00:00:00' WHERE BusinessDate LIKE '0001-01-01%';
+
+CREATE INDEX IF NOT EXISTS IX_sales_BusinessDate ON sales (BusinessDate);
+CREATE INDEX IF NOT EXISTS IX_sale_returns_BusinessDate ON sale_returns (BusinessDate);
+CREATE INDEX IF NOT EXISTS IX_customer_collections_BusinessDate ON customer_collections (BusinessDate);
+CREATE INDEX IF NOT EXISTS IX_goods_receipts_BusinessDate ON goods_receipts (BusinessDate);
+CREATE INDEX IF NOT EXISTS IX_purchase_returns_BusinessDate ON purchase_returns (BusinessDate);
+CREATE INDEX IF NOT EXISTS IX_purchase_payments_BusinessDate ON purchase_payments (BusinessDate);
+CREATE INDEX IF NOT EXISTS IX_supplier_payments_BusinessDate ON supplier_payments (BusinessDate);
+CREATE INDEX IF NOT EXISTS IX_operating_entries_BusinessDate ON operating_entries (BusinessDate);
+""", cancellationToken);
+
+        const string closingSql = """
+CREATE TABLE IF NOT EXISTS business_days (
+    Id INTEGER NOT NULL CONSTRAINT PK_business_days PRIMARY KEY AUTOINCREMENT,
+    BusinessDate TEXT NOT NULL,
+    Status TEXT NOT NULL DEFAULT 'open',
+    ClosedAt TEXT NULL,
+    ClosedByUserId INTEGER NULL,
+    ReopenedAt TEXT NULL,
+    ReopenedByUserId INTEGER NULL,
+    ReopenReason TEXT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_business_days_BusinessDate ON business_days (BusinessDate);
+
+CREATE TABLE IF NOT EXISTS business_day_closures (
+    Id INTEGER NOT NULL CONSTRAINT PK_business_day_closures PRIMARY KEY AUTOINCREMENT,
+    BusinessDayId INTEGER NOT NULL,
+    IdempotencyKey TEXT NOT NULL,
+    Number TEXT NOT NULL,
+    Version INTEGER NOT NULL,
+    ClosedByUserId INTEGER NOT NULL,
+    ShiftCount INTEGER NOT NULL,
+    SalesCount INTEGER NOT NULL,
+    SalesSubtotal TEXT NOT NULL,
+    SalesLineDiscountTotal TEXT NOT NULL,
+    SalesDiscountTotal TEXT NOT NULL,
+    SalesNetTotal TEXT NOT NULL,
+    SalesReturnTotal TEXT NOT NULL,
+    NetSalesTotal TEXT NOT NULL,
+    SalesCogsTotal TEXT NOT NULL,
+    CogsReversedTotal TEXT NOT NULL,
+    NetCogsTotal TEXT NOT NULL,
+    GrossProfitTotal TEXT NOT NULL,
+    CustomerCollectionsTotal TEXT NOT NULL,
+    PurchasesTotal TEXT NOT NULL,
+    PurchaseReturnsTotal TEXT NOT NULL,
+    SupplierPaymentsTotal TEXT NOT NULL,
+    OperatingExpensesTotal TEXT NOT NULL,
+    OtherIncomeTotal TEXT NOT NULL,
+    NetProfitTotal TEXT NOT NULL,
+    OpeningCashTotal TEXT NOT NULL,
+    CashInflowTotal TEXT NOT NULL,
+    CashOutflowTotal TEXT NOT NULL,
+    ExpectedCashTotal TEXT NOT NULL,
+    ActualCashTotal TEXT NOT NULL,
+    VarianceTotal TEXT NOT NULL,
+    CashBreakdownJson TEXT NULL,
+    Notes TEXT NULL,
+    ClosedAt TEXT NOT NULL,
+    CreatedAt TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_business_day_closures_IdempotencyKey
+ON business_day_closures (IdempotencyKey);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_business_day_closures_Number
+ON business_day_closures (Number);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_business_day_closures_day_version
+ON business_day_closures (BusinessDayId, Version);
+
+INSERT OR IGNORE INTO business_days (BusinessDate, Status)
+SELECT NormalizedBusinessDate, 'open'
+FROM (
+    SELECT substr(BusinessDate, 1, 10) || ' 00:00:00' AS NormalizedBusinessDate FROM cashier_shifts
+    UNION SELECT substr(BusinessDate, 1, 10) || ' 00:00:00' FROM sales
+    UNION SELECT substr(BusinessDate, 1, 10) || ' 00:00:00' FROM sale_returns
+    UNION SELECT substr(BusinessDate, 1, 10) || ' 00:00:00' FROM customer_collections
+    UNION SELECT substr(BusinessDate, 1, 10) || ' 00:00:00' FROM goods_receipts
+    UNION SELECT substr(BusinessDate, 1, 10) || ' 00:00:00' FROM purchase_returns
+    UNION SELECT substr(BusinessDate, 1, 10) || ' 00:00:00' FROM purchase_payments
+    UNION SELECT substr(BusinessDate, 1, 10) || ' 00:00:00' FROM supplier_payments
+    UNION SELECT substr(BusinessDate, 1, 10) || ' 00:00:00' FROM operating_entries
+)
+WHERE NormalizedBusinessDate IS NOT NULL
+  AND NormalizedBusinessDate NOT LIKE '0001-01-01%';
+""";
+        await context.Database.ExecuteSqlRawAsync(closingSql, cancellationToken);
+
         await context.Database.ExecuteSqlRawAsync("""
 UPDATE sales
 SET BalanceDue = CASE

@@ -62,6 +62,8 @@ public sealed class LocalCashManagementService(
 
         await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
         await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
+        var shiftBusinessDate = BusinessDayGuard.LocalBusinessDate(DateTimeOffset.UtcNow);
+        await BusinessDayGuard.EnsureOpenAsync(context, shiftBusinessDate, cancellationToken);
 
         var existing = await context.CashierShifts.SingleOrDefaultAsync(
             x => x.OpenIdempotencyKey == request.IdempotencyKey, cancellationToken);
@@ -92,7 +94,7 @@ public sealed class LocalCashManagementService(
         {
             TerminalId = terminal.Id,
             UserId = user.UserId,
-            BusinessDate = DateTime.Today,
+            BusinessDate = shiftBusinessDate,
             OpenIdempotencyKey = request.IdempotencyKey,
             Status = "open",
             OpeningCash = opening,
@@ -183,6 +185,7 @@ public sealed class LocalCashManagementService(
         var shift = await context.CashierShifts.SingleOrDefaultAsync(
             x => x.Id == request.ShiftId, cancellationToken)
             ?? throw new InvalidOperationException("Cashier shift was not found.");
+        await BusinessDayGuard.EnsureOpenAsync(context, shift.BusinessDate, cancellationToken);
 
         if (shift.UserId != user.UserId && !authorizer.HasPermission("cash.manage"))
             throw new InvalidOperationException("The user is not allowed to close another cashier's shift.");
@@ -255,6 +258,7 @@ public sealed class LocalCashManagementService(
         await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
         var shift = await context.CashierShifts.SingleOrDefaultAsync(x => x.Id == shiftId, cancellationToken)
             ?? throw new InvalidOperationException("Cashier shift was not found.");
+        await BusinessDayGuard.EnsureOpenAsync(context, shift.BusinessDate, cancellationToken);
 
         if (shift.Status == "open")
         {
@@ -368,6 +372,7 @@ public sealed class LocalCashManagementService(
             ?? throw new InvalidOperationException("The selected payment method is unavailable.");
 
         var occurredAt = request.OccurredAt ?? DateTimeOffset.UtcNow;
+        await BusinessDayGuard.EnsureOpenAsync(context, occurredAt, cancellationToken);
         var entry = new OperatingEntryEntity
         {
             Number = await NextNumberAsync(context, "operating_entry", request.EntryType == "expense" ? "EXP" : "INC", occurredAt, cancellationToken),
@@ -375,6 +380,7 @@ public sealed class LocalCashManagementService(
             ExpenseCategoryId = category.Id,
             PaymentMethodId = method.Id,
             RecordedByUserId = user.UserId,
+            BusinessDate = BusinessDayGuard.LocalBusinessDate(occurredAt),
             EntryType = request.EntryType,
             Amount = amount,
             Reference = Clean(request.Reference),

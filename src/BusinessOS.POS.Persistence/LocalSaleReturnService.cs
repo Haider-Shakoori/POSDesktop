@@ -200,12 +200,14 @@ public sealed class LocalSaleReturnService(
         var refunds = await PrepareRefundsAsync(context, requestedRefunds, refundDue, user.UserId, cancellationToken);
 
         var postedAt = DateTimeOffset.UtcNow;
+        await BusinessDayGuard.EnsureOpenAsync(context, postedAt, cancellationToken);
         var saleReturn = new SaleReturnEntity
         {
             Number = await NextNumberAsync(context, "sale_return", type == "void" ? "VOID" : "RET", postedAt, cancellationToken),
             IdempotencyKey = idempotencyKey,
             SaleId = sale.Id,
             CreatedByUserId = user.UserId,
+            BusinessDate = BusinessDayGuard.LocalBusinessDate(postedAt),
             Type = type,
             Status = "posted",
             Reason = reason,

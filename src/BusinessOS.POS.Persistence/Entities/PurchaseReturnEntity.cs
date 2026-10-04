@@ -8,6 +8,7 @@ public sealed class PurchaseReturnEntity
     public long GoodsReceiptId { get; set; }
     public long SupplierId { get; set; }
     public long CreatedByUserId { get; set; }
+    public DateTime BusinessDate { get; set; }
     public string Reason { get; set; } = string.Empty;
     public decimal ReturnTotal { get; set; }
     public DateTimeOffset PostedAt { get; set; }

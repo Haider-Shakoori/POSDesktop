@@ -215,6 +215,7 @@ public sealed class LocalCustomerService(
         }
 
         var collectedAt = request.CollectedAt ?? DateTimeOffset.UtcNow;
+        await BusinessDayGuard.EnsureOpenAsync(context, collectedAt, cancellationToken);
         var collection = new CustomerCollectionEntity
         {
             Number = await NextNumberAsync(context, "customer_collection", "COL", collectedAt, cancellationToken),
@@ -222,6 +223,7 @@ public sealed class LocalCustomerService(
             CustomerId = customer.Id,
             PaymentMethodCode = method.Code,
             RecordedByUserId = sessions.Current!.UserId,
+            BusinessDate = BusinessDayGuard.LocalBusinessDate(collectedAt),
             Amount = amount,
             TenderedAmount = tendered,
             ChangeAmount = method.IsCash ? Money(tendered - amount) : 0m,

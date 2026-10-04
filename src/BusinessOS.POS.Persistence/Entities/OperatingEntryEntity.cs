@@ -8,6 +8,7 @@ public sealed class OperatingEntryEntity
     public long ExpenseCategoryId { get; set; }
     public long PaymentMethodId { get; set; }
     public long RecordedByUserId { get; set; }
+    public DateTime BusinessDate { get; set; }
     public string EntryType { get; set; } = "expense";
     public decimal Amount { get; set; }
     public string? Reference { get; set; }
