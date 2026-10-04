@@ -5,7 +5,9 @@ namespace BusinessOS.POS.Persistence;
 
 internal static class BusinessDayGuard
 {
-    public static DateTime LocalBusinessDate(DateTimeOffset value) => value.ToLocalTime().Date;
+    private static readonly TimeSpan AfghanistanOffset = TimeSpan.FromMinutes(270);
+
+    public static DateTime LocalBusinessDate(DateTimeOffset value) => value.ToOffset(AfghanistanOffset).Date;
 
     public static async Task<BusinessDayEntity> EnsureOpenAsync(
         PosDbContext context,

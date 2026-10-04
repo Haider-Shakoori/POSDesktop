@@ -333,7 +333,7 @@ public sealed class LocalReportingService(
             .Include(x => x.Product)
             .Where(x => x.StockOnHand > 0m)
             .ToListAsync(cancellationToken);
-        var today = DateTime.Today;
+        var today = DateTimeOffset.UtcNow.ToOffset(AfghanistanOffset).Date;
         var inventory = new InventoryHealth(
             tracked.Count,
             tracked.Count(x => x.StockOnHand <= x.MinimumStock),

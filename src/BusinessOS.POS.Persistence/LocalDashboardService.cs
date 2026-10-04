@@ -13,7 +13,7 @@ public sealed class LocalDashboardService(
     public async Task<DashboardSnapshot> GetAsync(CancellationToken cancellationToken = default)
     {
         var current = sessions.Current ?? throw new InvalidOperationException("No user is signed in.");
-        var date = DateTime.Today;
+        var date = BusinessDayGuard.LocalBusinessDate(DateTimeOffset.UtcNow);
 
         await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
 
