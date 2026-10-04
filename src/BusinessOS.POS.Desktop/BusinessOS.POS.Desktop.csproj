@@ -18,6 +18,14 @@
     <ProjectReference Include="..\BusinessOS.POS.Persistence\BusinessOS.POS.Persistence.csproj" />
   </ItemGroup>
   <ItemGroup>
+    <Page Update="Dashboard\DashboardView.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+    <Page Update="Reports\ReportsView.xaml">
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.12" />
   </ItemGroup>
