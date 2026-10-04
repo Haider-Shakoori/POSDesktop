@@ -1,5 +1,6 @@
 using System.Windows;
 using BusinessOS.POS.Application.Abstractions.Authentication;
+using BusinessOS.POS.Application.Abstractions.Networking;
 using BusinessOS.POS.Application.Abstractions.Persistence;
 using BusinessOS.POS.Application.Abstractions.Storage;
 using BusinessOS.POS.Desktop.Authentication;
@@ -15,6 +16,8 @@ using BusinessOS.POS.Desktop.Sales;
 using BusinessOS.POS.Desktop.Pos;
 using BusinessOS.POS.Desktop.Purchasing;
 using BusinessOS.POS.Infrastructure;
+using BusinessOS.POS.Infrastructure.Networking;
+using BusinessOS.POS.LocalClient;
 using BusinessOS.POS.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -32,12 +35,25 @@ public partial class App : System.Windows.Application
 
         try
         {
+            var paths = new ApplicationPaths();
+            paths.EnsureCreated();
+            var bootstrapConfigurationStore = new NetworkConfigurationStore(paths);
+            var networkConfiguration = await bootstrapConfigurationStore.LoadAsync();
+
             _host = Host.CreateDefaultBuilder()
                 .ConfigureServices(services =>
                 {
-                    services.AddSingleton<IApplicationPaths, ApplicationPaths>();
+                    services.AddSingleton<IApplicationPaths>(paths);
                     services.AddBusinessOSPosInfrastructure();
-                    services.AddBusinessOSPosPersistence();
+
+                    if (networkConfiguration.Mode == DeploymentMode.Client)
+                    {
+                        services.AddBusinessOSPosLocalClient();
+                    }
+                    else
+                    {
+                        services.AddBusinessOSPosPersistence();
+                    }
                     services.AddTransient<LoginViewModel>();
                     services.AddTransient<OwnerSetupViewModel>();
                     services.AddTransient<PosViewModel>();
@@ -58,19 +74,22 @@ public partial class App : System.Windows.Application
 
             await _host.StartAsync();
 
-            var initializer = _host.Services.GetRequiredService<ILocalDatabaseInitializer>();
-            await initializer.InitializeAsync();
-
-            var bootstrap = _host.Services.GetRequiredService<IOwnerBootstrapService>();
-            if (!await bootstrap.HasAnyUsersAsync())
+            if (networkConfiguration.Mode != DeploymentMode.Client)
             {
-                var setup = new OwnerSetupWindow(
-                    _host.Services.GetRequiredService<OwnerSetupViewModel>());
+                var initializer = _host.Services.GetRequiredService<ILocalDatabaseInitializer>();
+                await initializer.InitializeAsync();
 
-                if (setup.ShowDialog() != true)
+                var bootstrap = _host.Services.GetRequiredService<IOwnerBootstrapService>();
+                if (!await bootstrap.HasAnyUsersAsync())
                 {
-                    Shutdown();
-                    return;
+                    var setup = new OwnerSetupWindow(
+                        _host.Services.GetRequiredService<OwnerSetupViewModel>());
+
+                    if (setup.ShowDialog() != true)
+                    {
+                        Shutdown();
+                        return;
+                    }
                 }
             }
 
