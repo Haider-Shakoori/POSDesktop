@@ -1,3 +1,4 @@
+using Xunit;
 using BusinessOS.POS.Application.Abstractions.Networking;
 using BusinessOS.POS.Application.Abstractions.Storage;
 using BusinessOS.POS.Infrastructure.Networking;
