@@ -84,11 +84,13 @@ public sealed class LocalTerminalService(IDbContextFactory<PosDbContext> context
         await using var transaction = await context.Database.BeginTransactionAsync(cancellationToken);
         var now = DateTimeOffset.UtcNow;
 
-        var candidates = await context.LanPairingCodes
-            .Where(x => x.UsedAt == null && x.ExpiresAt >= now && x.FailedAttempts < x.MaxAttempts)
+        var candidates = (await context.LanPairingCodes
+                .Where(x => x.UsedAt == null && x.FailedAttempts < x.MaxAttempts)
+                .ToListAsync(cancellationToken))
+            .Where(x => x.ExpiresAt >= now)
             .OrderByDescending(x => x.CreatedAt)
             .Take(25)
-            .ToListAsync(cancellationToken);
+            .ToList();
 
         LanPairingCodeEntity? matched = null;
         foreach (var candidate in candidates)
