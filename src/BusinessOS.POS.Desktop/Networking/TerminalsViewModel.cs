@@ -33,7 +33,11 @@ public sealed partial class TerminalsViewModel : ObservableObject
         SaveConfigurationCommand = new AsyncRelayCommand(SaveConfigurationAsync);
         CreatePairingCodeCommand = new AsyncRelayCommand(CreatePairingCodeAsync);
         DiscoverCommand = new AsyncRelayCommand(DiscoverAsync);
-        UseManualServerCommand = new RelayCommand(UseManualServer);
+        UseManualServerCommand = new RelayCommand(() =>
+        {
+            try { UseManualServer(); }
+            catch (Exception ex) { StatusMessage = ex.Message; }
+        });
         PairCommand = new AsyncRelayCommand(PairAsync);
         RevokeCommand = new AsyncRelayCommand(RevokeAsync);
     }

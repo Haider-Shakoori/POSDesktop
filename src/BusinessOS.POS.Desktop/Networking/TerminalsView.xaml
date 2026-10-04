@@ -43,6 +43,9 @@
         <Button Content="Create 5-minute Pairing Code" Command="{Binding CreatePairingCodeCommand}" Style="{StaticResource PrimaryButtonStyle}"/>
         <TextBlock Text="{Binding IssuedPairingCode}" FontSize="32" FontWeight="Bold" HorizontalAlignment="Center" Margin="0,12,0,0"/>
         <TextBlock Text="{Binding PairingExpiresAt, StringFormat=Expires: {0:g}}" Style="{StaticResource MutedTextStyle}" HorizontalAlignment="Center"/>
+        <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,12"/>
+        <TextBlock Text="{Binding ConfiguredServerId, StringFormat=Server ID: {0}}" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap"/>
+        <TextBlock Text="{Binding ConfiguredServerCertificateSha256, StringFormat=Certificate SHA-256: {0}}" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" Margin="0,4,0,0"/>
        </StackPanel>
       </Border>
       <Border Style="{StaticResource CardBorderStyle}" Margin="0,14,0,0">
@@ -83,6 +86,17 @@
        <TextBlock Text="Terminal name" Style="{StaticResource MutedTextStyle}"/><TextBox Text="{Binding TerminalName}" Margin="0,3,0,0"/>
        <TextBlock Text="Terminal role" Style="{StaticResource MutedTextStyle}" Margin="0,8,0,0"/><TextBox Text="{Binding TerminalRole}" Margin="0,3,0,0"/>
        <TextBlock Text="Pairing code" Style="{StaticResource MutedTextStyle}" Margin="0,8,0,0"/><TextBox Text="{Binding PairingCode}" Margin="0,3,0,0"/>
+       <Expander Header="Manual server fallback" Margin="0,10,0,0">
+        <StackPanel Margin="0,8,0,0">
+         <TextBlock Text="Use this only when UDP discovery is blocked. Copy the server ID and SHA-256 fingerprint from the Main POS Server." Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap"/>
+         <TextBox Text="{Binding ManualServerName}" ToolTip="Server name" Margin="0,8,0,0"/>
+         <TextBox Text="{Binding ManualServerHost}" ToolTip="Server host or IP" Margin="0,6,0,0"/>
+         <TextBox Text="{Binding ManualServerPort}" ToolTip="Server port" Margin="0,6,0,0"/>
+         <TextBox Text="{Binding ManualServerId}" ToolTip="Server UUID" Margin="0,6,0,0"/>
+         <TextBox Text="{Binding ManualCertificateSha256}" ToolTip="Certificate SHA-256 fingerprint" Margin="0,6,0,0"/>
+         <Button Content="Use Manual Server" Command="{Binding UseManualServerCommand}" Style="{StaticResource SecondaryButtonStyle}" Margin="0,8,0,0"/>
+        </StackPanel>
+       </Expander>
        <Button Content="Pair This Workstation" Command="{Binding PairCommand}" Style="{StaticResource PrimaryButtonStyle}" Margin="0,12,0,0"/>
        <Border Height="1" Background="{DynamicResource BorderBrush}" Margin="0,14"/>
        <TextBlock Text="{Binding ConfiguredServerHost, StringFormat=Configured server: {0}}" Style="{StaticResource MutedTextStyle}"/>
