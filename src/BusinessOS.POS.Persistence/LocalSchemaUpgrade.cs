@@ -421,6 +421,46 @@ ON cashier_shift_closures (CashierShiftId, Version);
 """;
         await context.Database.ExecuteSqlRawAsync(cashSql, cancellationToken);
 
+        const string networkSql = """
+CREATE TABLE IF NOT EXISTS local_server_identity (
+    Id INTEGER NOT NULL CONSTRAINT PK_local_server_identity PRIMARY KEY,
+    ServerId TEXT NOT NULL,
+    ServerName TEXT NOT NULL,
+    CreatedAt TEXT NOT NULL,
+    UpdatedAt TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_local_server_identity_ServerId
+ON local_server_identity (ServerId);
+
+CREATE TABLE IF NOT EXISTS registered_terminals (
+    Id TEXT NOT NULL CONSTRAINT PK_registered_terminals PRIMARY KEY,
+    Name TEXT NOT NULL,
+    ComputerName TEXT NOT NULL,
+    TerminalRole TEXT NOT NULL,
+    SecretHash TEXT NOT NULL,
+    IsActive INTEGER NOT NULL DEFAULT 1,
+    RegisteredAt TEXT NOT NULL,
+    LastSeenAt TEXT NULL,
+    RevokedAt TEXT NULL
+);
+CREATE INDEX IF NOT EXISTS IX_registered_terminals_active_name
+ON registered_terminals (IsActive, Name);
+
+CREATE TABLE IF NOT EXISTS terminal_pairing_codes (
+    Id TEXT NOT NULL CONSTRAINT PK_terminal_pairing_codes PRIMARY KEY,
+    SaltBase64 TEXT NOT NULL,
+    CodeHashBase64 TEXT NOT NULL,
+    CreatedAt TEXT NOT NULL,
+    ExpiresAt TEXT NOT NULL,
+    UsedAt TEXT NULL,
+    FailedAttempts INTEGER NOT NULL DEFAULT 0,
+    MaxAttempts INTEGER NOT NULL DEFAULT 5
+);
+CREATE INDEX IF NOT EXISTS IX_terminal_pairing_codes_used_expiry
+ON terminal_pairing_codes (UsedAt, ExpiresAt);
+""";
+        await context.Database.ExecuteSqlRawAsync(networkSql, cancellationToken);
+
         await EnsureColumnAsync(context, "cashier_shifts", "TerminalId", "INTEGER NOT NULL DEFAULT 1", cancellationToken);
         await EnsureColumnAsync(context, "cashier_shifts", "BusinessDate", "TEXT NULL", cancellationToken);
         await EnsureColumnAsync(context, "cashier_shifts", "OpenIdempotencyKey", "TEXT NULL", cancellationToken);

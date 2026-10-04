@@ -40,6 +40,9 @@ public sealed class PosDbContext(DbContextOptions<PosDbContext> options) : DbCon
     public DbSet<InventoryWriteoffEntity> InventoryWriteoffs => Set<InventoryWriteoffEntity>();
     public DbSet<InventoryWriteoffItemEntity> InventoryWriteoffItems => Set<InventoryWriteoffItemEntity>();
     public DbSet<TerminalEntity> Terminals => Set<TerminalEntity>();
+    public DbSet<LocalServerIdentityEntity> LocalServerIdentities => Set<LocalServerIdentityEntity>();
+    public DbSet<RegisteredTerminalEntity> RegisteredTerminals => Set<RegisteredTerminalEntity>();
+    public DbSet<TerminalPairingCodeEntity> TerminalPairingCodes => Set<TerminalPairingCodeEntity>();
     public DbSet<CashierShiftEntity> CashierShifts => Set<CashierShiftEntity>();
     public DbSet<CashMovementEntity> CashMovements => Set<CashMovementEntity>();
     public DbSet<CashierShiftClosureEntity> CashierShiftClosures => Set<CashierShiftClosureEntity>();
@@ -397,6 +400,31 @@ public sealed class PosDbContext(DbContextOptions<PosDbContext> options) : DbCon
         terminal.Property(x => x.Code).HasMaxLength(40).IsRequired();
         terminal.Property(x => x.Name).HasMaxLength(120).IsRequired();
         terminal.HasIndex(x => x.Code).IsUnique();
+
+        var serverIdentity = modelBuilder.Entity<LocalServerIdentityEntity>();
+        serverIdentity.ToTable("local_server_identity");
+        serverIdentity.HasKey(x => x.Id);
+        serverIdentity.Property(x => x.ServerId).HasMaxLength(80).IsRequired();
+        serverIdentity.HasIndex(x => x.ServerId).IsUnique();
+        serverIdentity.Property(x => x.ServerName).HasMaxLength(160).IsRequired();
+
+        var registeredTerminal = modelBuilder.Entity<RegisteredTerminalEntity>();
+        registeredTerminal.ToTable("registered_terminals");
+        registeredTerminal.HasKey(x => x.Id);
+        registeredTerminal.Property(x => x.Id).HasMaxLength(80);
+        registeredTerminal.Property(x => x.Name).HasMaxLength(160).IsRequired();
+        registeredTerminal.Property(x => x.ComputerName).HasMaxLength(160).IsRequired();
+        registeredTerminal.Property(x => x.TerminalRole).HasMaxLength(80).IsRequired();
+        registeredTerminal.Property(x => x.SecretHash).HasMaxLength(128).IsRequired();
+        registeredTerminal.HasIndex(x => new { x.IsActive, x.Name });
+
+        var pairingCode = modelBuilder.Entity<TerminalPairingCodeEntity>();
+        pairingCode.ToTable("terminal_pairing_codes");
+        pairingCode.HasKey(x => x.Id);
+        pairingCode.Property(x => x.Id).HasMaxLength(80);
+        pairingCode.Property(x => x.SaltBase64).HasMaxLength(128).IsRequired();
+        pairingCode.Property(x => x.CodeHashBase64).HasMaxLength(128).IsRequired();
+        pairingCode.HasIndex(x => new { x.UsedAt, x.ExpiresAt });
 
         var shift = modelBuilder.Entity<CashierShiftEntity>();
         shift.ToTable("cashier_shifts");
