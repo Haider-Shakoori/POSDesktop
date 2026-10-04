@@ -16,6 +16,7 @@
     <ProjectReference Include="..\BusinessOS.POS.Application\BusinessOS.POS.Application.csproj" />
     <ProjectReference Include="..\BusinessOS.POS.Infrastructure\BusinessOS.POS.Infrastructure.csproj" />
     <ProjectReference Include="..\BusinessOS.POS.Persistence\BusinessOS.POS.Persistence.csproj" />
+    <ProjectReference Include="..\BusinessOS.POS.LocalServer\BusinessOS.POS.LocalServer.csproj" ReferenceOutputAssembly="false" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.0" />
