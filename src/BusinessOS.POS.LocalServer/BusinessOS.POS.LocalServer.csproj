@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>BusinessOS.POS.LocalServer</AssemblyName>
+    <RootNamespace>BusinessOS.POS.LocalServer</RootNamespace>
+    <Product>BusinessOS POS Local Server</Product>
+    <Company>BusinessOS.af</Company>
+    <Authors>WeSoft Technologies</Authors>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\BusinessOS.POS.Application\BusinessOS.POS.Application.csproj" />
+    <ProjectReference Include="..\BusinessOS.POS.Domain\BusinessOS.POS.Domain.csproj" />
+    <ProjectReference Include="..\BusinessOS.POS.Infrastructure\BusinessOS.POS.Infrastructure.csproj" />
+    <ProjectReference Include="..\BusinessOS.POS.Persistence\BusinessOS.POS.Persistence.csproj" />
+  </ItemGroup>
+</Project>
