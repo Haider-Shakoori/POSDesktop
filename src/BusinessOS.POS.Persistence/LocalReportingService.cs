@@ -21,22 +21,26 @@ public sealed class LocalReportingService(
         await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
 
         var customers = (await context.Customers.AsNoTracking()
+                .Where(x => x.IsActive)
                 .OrderBy(x => x.Name).ThenBy(x => x.Id).ToListAsync(cancellationToken))
             .Select(x => new ReportLookupItem(x.Id, x.Phone ?? string.Empty, x.Name))
             .ToList();
 
         var suppliers = (await context.Suppliers.AsNoTracking()
+                .Where(x => x.IsActive)
                 .OrderBy(x => x.Name).ThenBy(x => x.Id).ToListAsync(cancellationToken))
             .Select(x => new ReportLookupItem(x.Id, x.Phone ?? string.Empty, x.Name))
             .ToList();
 
         var products = (await context.Products.AsNoTracking()
+                .Where(x => x.IsActive)
                 .OrderBy(x => x.NameEn).ThenBy(x => x.Id).ToListAsync(cancellationToken))
             .Select(x => new ReportLookupItem(
                 x.Id, x.Sku, Localize(x.NameEn, x.NameFa, x.NamePs, locale)))
             .ToList();
 
         var categories = (await context.Categories.AsNoTracking()
+                .Where(x => x.IsActive)
                 .OrderBy(x => x.SortOrder).ThenBy(x => x.NameEn).ToListAsync(cancellationToken))
             .Select(x => new ReportLookupItem(
                 x.Id, string.Empty, Localize(x.NameEn, x.NameFa, x.NamePs, locale)))
