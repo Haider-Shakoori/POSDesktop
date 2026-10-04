@@ -63,7 +63,7 @@ public sealed class PinnedLocalServerTransport(
             (_, certificate, _, _) => MatchesFingerprint(certificate, expected);
 
         using var client = new HttpClient(handler) { Timeout = TimeSpan.FromSeconds(30) };
-        return await client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        return await client.SendAsync(request, HttpCompletionOption.ResponseContentRead, cancellationToken);
     }
 
     public static SocketsHttpHandler CreatePinnedHandler(string certificateSha256)

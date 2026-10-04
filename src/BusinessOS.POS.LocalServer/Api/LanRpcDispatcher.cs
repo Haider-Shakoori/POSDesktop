@@ -9,6 +9,7 @@ using BusinessOS.POS.Application.Abstractions.Inventory;
 using BusinessOS.POS.Application.Abstractions.Purchasing;
 using BusinessOS.POS.Application.Abstractions.Reporting;
 using BusinessOS.POS.Application.Abstractions.Sales;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace BusinessOS.POS.LocalServer.Api;
 

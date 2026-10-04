@@ -54,8 +54,8 @@ var app = builder.Build();
 
 app.Use(async (context, next) =>
 {
-    context.Response.Headers.CacheControl = "no-store";
-    context.Response.Headers.XContentTypeOptions = "nosniff";
+    context.Response.Headers["Cache-Control"] = "no-store";
+    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
     try
     {
         await next();

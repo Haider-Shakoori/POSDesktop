@@ -11,21 +11,31 @@ namespace BusinessOS.POS.LocalServer.Authentication;
 
 public sealed class LanAuthenticationService(
     IDbContextFactory<PosDbContext> contextFactory,
-    PasswordHasher passwordHasher)
+    PasswordHasher passwordHasher,
+    LoginAttemptThrottle throttle)
 {
     public async Task<LocalLoginResult> LoginAsync(
         string terminalId, string username, string password,
         CancellationToken cancellationToken = default)
     {
         var normalized = username.Trim().ToLowerInvariant();
+        var throttleKey = terminalId + ":" + normalized;
+        if (!throttle.CanAttempt(throttleKey, out var secondsRemaining))
+            throw new UnauthorizedAccessException(
+                "Too many sign-in attempts. Try again in " + secondsRemaining + " seconds.");
+
         await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
         var user = await context.Users
             .Include(x => x.Roles).ThenInclude(x => x.Permissions)
             .SingleOrDefaultAsync(x => x.NormalizedUsername == normalized, cancellationToken);
 
         if (user is null || !user.IsActive || !passwordHasher.Verify(password, user.PasswordHash))
+        {
+            throttle.RegisterFailure(throttleKey);
             throw new UnauthorizedAccessException("Invalid username or password.");
+        }
 
+        throttle.Clear(throttleKey);
         var now = DateTimeOffset.UtcNow;
         var expires = now.AddHours(12);
         var tokenBytes = RandomNumberGenerator.GetBytes(32);

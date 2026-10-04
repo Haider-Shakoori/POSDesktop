@@ -18,7 +18,7 @@ public sealed class LanUserSessionService(
             new { username, password },
             terminal: true,
             session: false,
-            cancellationToken);
+            cancellationToken: cancellationToken);
         state.Set(result.SessionToken, result.User, result.ExpiresAt);
         return result.User;
     }
