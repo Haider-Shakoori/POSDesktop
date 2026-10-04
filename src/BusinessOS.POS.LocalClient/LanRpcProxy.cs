@@ -20,7 +20,7 @@ public sealed class LanRpcProxy<T> : DispatchProxy where T : class
 
     protected override object? Invoke(MethodInfo? targetMethod, object?[]? args)
     {
-        targetMethod ??= throw new ArgumentNullException(nameof(targetMethod));
+        if (targetMethod is null) throw new ArgumentNullException(nameof(targetMethod));
         args ??= [];
 
         var parameters = targetMethod.GetParameters();
