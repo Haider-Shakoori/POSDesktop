@@ -11,6 +11,7 @@ using BusinessOS.POS.Desktop.Dashboard;
 using BusinessOS.POS.Desktop.Reports;
 using BusinessOS.POS.Desktop.Expenses;
 using BusinessOS.POS.Desktop.Inventory;
+using BusinessOS.POS.Desktop.Networking;
 using BusinessOS.POS.Desktop.Customers;
 using BusinessOS.POS.Desktop.Sales;
 using BusinessOS.POS.Desktop.Pos;
@@ -53,6 +54,7 @@ public partial class App : System.Windows.Application
                     else
                     {
                         services.AddBusinessOSPosPersistence();
+                        services.AddSingleton<LanTerminalPairingClient>();
                     }
                     services.AddTransient<LoginViewModel>();
                     services.AddTransient<OwnerSetupViewModel>();
@@ -66,6 +68,7 @@ public partial class App : System.Windows.Application
                     services.AddTransient<DailyClosingViewModel>();
                     services.AddTransient<DashboardViewModel>();
                     services.AddTransient<ReportsViewModel>();
+                    services.AddTransient<NetworkSettingsViewModel>();
                     services.AddTransient<ExpensesViewModel>();
                     services.AddSingleton<IReceiptPrintService, WpfReceiptPrintService>();
                     services.AddTransient<MainWindowViewModel>();

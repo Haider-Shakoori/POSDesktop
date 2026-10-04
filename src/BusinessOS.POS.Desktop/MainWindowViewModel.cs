@@ -8,6 +8,7 @@ using BusinessOS.POS.Desktop.Dashboard;
 using BusinessOS.POS.Desktop.Reports;
 using BusinessOS.POS.Desktop.Expenses;
 using BusinessOS.POS.Desktop.Inventory;
+using BusinessOS.POS.Desktop.Networking;
 using BusinessOS.POS.Desktop.Customers;
 using BusinessOS.POS.Desktop.Sales;
 using BusinessOS.POS.Desktop.Navigation;
@@ -36,7 +37,8 @@ public partial class MainWindowViewModel : ObservableObject
         CashViewModel cash,
         DailyClosingViewModel closing,
         ExpensesViewModel expenses,
-        ReportsViewModel reports)
+        ReportsViewModel reports,
+        NetworkSettingsViewModel network)
     {
         _sessions = sessions;
         Dashboard = dashboard;
@@ -50,6 +52,7 @@ public partial class MainWindowViewModel : ObservableObject
         Closing = closing;
         Expenses = expenses;
         Reports = reports;
+        Network = network;
 
         var items = new[]
         {
@@ -115,6 +118,8 @@ public partial class MainWindowViewModel : ObservableObject
     public ExpensesViewModel Expenses { get; }
 
     public ReportsViewModel Reports { get; }
+
+    public NetworkSettingsViewModel Network { get; }
 
     public AppearanceTheme[] Themes { get; }
 
