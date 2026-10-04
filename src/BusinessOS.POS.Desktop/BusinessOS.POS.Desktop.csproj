@@ -15,6 +15,7 @@
   <ItemGroup>
     <ProjectReference Include="..\BusinessOS.POS.Application\BusinessOS.POS.Application.csproj" />
     <ProjectReference Include="..\BusinessOS.POS.Infrastructure\BusinessOS.POS.Infrastructure.csproj" />
+    <ProjectReference Include="..\BusinessOS.POS.LocalClient\BusinessOS.POS.LocalClient.csproj" />
     <ProjectReference Include="..\BusinessOS.POS.Persistence\BusinessOS.POS.Persistence.csproj" />
   </ItemGroup>
   <ItemGroup>
