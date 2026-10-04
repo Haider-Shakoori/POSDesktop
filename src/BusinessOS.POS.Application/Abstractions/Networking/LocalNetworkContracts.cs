@@ -11,6 +11,7 @@ public sealed record RegisteredLanTerminal(
     string Name,
     string ComputerName,
     string TerminalRole,
+    long? CashTerminalId,
     bool IsActive,
     DateTimeOffset RegisteredAt,
     DateTimeOffset? LastSeenAt,

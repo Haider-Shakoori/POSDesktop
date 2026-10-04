@@ -6,6 +6,7 @@ public sealed class RegisteredLanTerminalEntity
     public string Name { get; set; } = string.Empty;
     public string ComputerName { get; set; } = string.Empty;
     public string TerminalRole { get; set; } = string.Empty;
+    public long? CashTerminalId { get; set; }
     public string SecretHashBase64 { get; set; } = string.Empty;
     public string AllowedPermissionsJson { get; set; } = "[]";
     public bool IsActive { get; set; } = true;
