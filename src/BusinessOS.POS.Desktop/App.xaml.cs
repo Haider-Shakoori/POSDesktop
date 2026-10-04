@@ -39,8 +39,25 @@ public partial class App : System.Windows.Application
             var paths = new ApplicationPaths();
             paths.EnsureCreated();
             var networkStore = new NetworkConfigurationStore(paths);
-            var networkConfiguration = await networkStore.LoadAsync();
             var secretStore = new WindowsNetworkSecretStore(paths);
+            var discovery = new UdpLocalServerDiscovery();
+            var networkConfiguration = await networkStore.LoadAsync();
+
+            if (!networkConfiguration.IsConfigured)
+            {
+                var pairing = new LanTerminalPairingClient(networkStore, secretStore);
+                var setup = new DeploymentSetupWindow(
+                    new DeploymentSetupViewModel(networkStore, discovery, pairing));
+
+                if (setup.ShowDialog() != true)
+                {
+                    Shutdown();
+                    return;
+                }
+
+                networkConfiguration = await networkStore.LoadAsync();
+            }
+
             var clientMode = networkConfiguration.Mode == DeploymentMode.Client &&
                              networkConfiguration.IsConfigured;
 
@@ -50,7 +67,7 @@ public partial class App : System.Windows.Application
                     services.AddSingleton<IApplicationPaths>(paths);
                     services.AddSingleton<INetworkConfigurationStore>(networkStore);
                     services.AddSingleton<INetworkSecretStore>(secretStore);
-                    services.AddSingleton<ILocalServerDiscovery, UdpLocalServerDiscovery>();
+                    services.AddSingleton<ILocalServerDiscovery>(discovery);
 
                     if (clientMode)
                     {
