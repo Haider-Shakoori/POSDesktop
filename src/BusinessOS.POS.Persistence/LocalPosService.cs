@@ -452,8 +452,13 @@ public sealed class LocalPosService(
         CashierShiftEntity? shift = null;
         if (hasCash)
         {
-            shift = await context.CashierShifts
-                .Where(x => x.UserId == user.UserId && x.Status == "open")
+            var cashShiftQuery = context.CashierShifts
+                .Where(x => x.UserId == user.UserId && x.Status == "open");
+            if (workstation.CashTerminalId is not null)
+                cashShiftQuery = cashShiftQuery.Where(
+                    x => x.TerminalId == workstation.CashTerminalId.Value);
+
+            shift = await cashShiftQuery
                 .OrderByDescending(x => x.Id)
                 .FirstOrDefaultAsync(cancellationToken);
 
