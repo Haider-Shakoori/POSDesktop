@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using BusinessOS.POS.Application.Abstractions.Authentication;
+using BusinessOS.POS.Application.Abstractions.Networking;
 using BusinessOS.POS.Application.Abstractions.Sales;
 using BusinessOS.POS.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -11,7 +12,8 @@ namespace BusinessOS.POS.Persistence;
 public sealed class LocalPosService(
     IDbContextFactory<PosDbContext> contextFactory,
     IUserSessionService sessions,
-    IPermissionAuthorizer authorizer)
+    IPermissionAuthorizer authorizer,
+    IWorkstationContext workstation)
     : IPosService
 {
     public async Task<PosReferenceData> GetReferenceDataAsync(CancellationToken cancellationToken = default)
@@ -40,9 +42,13 @@ public sealed class LocalPosService(
                 x.Id, x.Name, x.Phone, x.CreditLimit, x.CurrentBalance))
             .ToListAsync(cancellationToken);
 
-        var shift = await context.CashierShifts
+        var shiftQuery = context.CashierShifts
             .AsNoTracking()
-            .Where(x => x.UserId == user.UserId && x.Status == "open")
+            .Where(x => x.UserId == user.UserId && x.Status == "open");
+        if (workstation.CashTerminalId is not null)
+            shiftQuery = shiftQuery.Where(x => x.TerminalId == workstation.CashTerminalId.Value);
+
+        var shift = await shiftQuery
             .OrderByDescending(x => x.Id)
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -158,8 +164,12 @@ public sealed class LocalPosService(
         var shiftBusinessDate = BusinessDayGuard.LocalBusinessDate(DateTimeOffset.UtcNow);
         await BusinessDayGuard.EnsureOpenAsync(context, shiftBusinessDate, cancellationToken);
 
-        var existing = await context.CashierShifts
-            .Where(x => x.UserId == user.UserId && x.Status == "open")
+        var existingQuery = context.CashierShifts
+            .Where(x => x.UserId == user.UserId && x.Status == "open");
+        if (workstation.CashTerminalId is not null)
+            existingQuery = existingQuery.Where(x => x.TerminalId == workstation.CashTerminalId.Value);
+
+        var existing = await existingQuery
             .OrderByDescending(x => x.Id)
             .FirstOrDefaultAsync(cancellationToken);
         if (existing is not null)
@@ -169,15 +179,26 @@ public sealed class LocalPosService(
             return new PosShiftState(true, existing.Id, existing.OpeningCash, existing.OpenedAt);
         }
 
-        var terminal = await context.Terminals
-            .Where(x => x.IsActive)
-            .OrderBy(x => x.Id)
-            .FirstOrDefaultAsync(cancellationToken)
-            ?? throw new InvalidOperationException("No active POS terminal is configured.");
+        TerminalEntity? terminal;
+        if (workstation.CashTerminalId is not null)
+        {
+            terminal = await context.Terminals.SingleOrDefaultAsync(
+                x => x.Id == workstation.CashTerminalId.Value && x.IsActive,
+                cancellationToken);
+        }
+        else
+        {
+            terminal = await context.Terminals
+                .Where(x => x.IsActive)
+                .OrderBy(x => x.Id)
+                .FirstOrDefaultAsync(cancellationToken);
+        }
+
+        terminal ??= throw new InvalidOperationException("No active POS terminal is configured for this workstation.");
 
         if (await context.CashierShifts.AnyAsync(
             x => x.TerminalId == terminal.Id && x.Status == "open", cancellationToken))
-            throw new InvalidOperationException("The default POS terminal already has an open cashier shift.");
+            throw new InvalidOperationException("This POS terminal already has an open cashier shift.");
 
         var now = DateTimeOffset.UtcNow;
         var shift = new CashierShiftEntity

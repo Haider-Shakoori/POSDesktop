@@ -55,6 +55,7 @@ builder.Services.AddScoped<UserSessionAuthenticationFilter>();
 builder.Services.AddScoped<LanUserAuthenticationService>();
 builder.Services.Replace(ServiceDescriptor.Scoped<IUserSessionService, RequestUserSessionService>());
 builder.Services.Replace(ServiceDescriptor.Scoped<IPermissionAuthorizer, RequestPermissionAuthorizer>());
+builder.Services.Replace(ServiceDescriptor.Scoped<IWorkstationContext, RequestWorkstationContext>());
 builder.Services.AddSingleton<LocalServerRuntimeState>();
 builder.Services.AddHostedService<UdpDiscoveryResponder>();
 
@@ -95,8 +96,8 @@ app.UseResponseCompression();
 app.UseRateLimiter();
 app.Use(async (context, next) =>
 {
-    context.Response.Headers.CacheControl = "no-store";
-    context.Response.Headers.XContentTypeOptions = "nosniff";
+    context.Response.Headers["Cache-Control"] = "no-store";
+    context.Response.Headers["X-Content-Type-Options"] = "nosniff";
     try { await next(); }
     catch (PermissionDeniedException)
     {

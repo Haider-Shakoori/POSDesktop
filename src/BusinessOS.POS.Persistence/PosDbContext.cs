@@ -409,6 +409,7 @@ public sealed class PosDbContext(DbContextOptions<PosDbContext> options) : DbCon
         lanTerminal.Property(x => x.Name).HasMaxLength(160).IsRequired();
         lanTerminal.Property(x => x.ComputerName).HasMaxLength(160).IsRequired();
         lanTerminal.Property(x => x.TerminalRole).HasMaxLength(100).IsRequired();
+        lanTerminal.HasIndex(x => x.CashTerminalId).IsUnique();
         lanTerminal.Property(x => x.SecretHashBase64).HasMaxLength(128).IsRequired();
         lanTerminal.Property(x => x.AllowedPermissionsJson).IsRequired();
         lanTerminal.HasIndex(x => x.ComputerName);

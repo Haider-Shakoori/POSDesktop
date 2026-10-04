@@ -131,6 +131,31 @@ public sealed class LocalTerminalService(IDbContextFactory<PosDbContext> context
         terminal.Name = name;
         terminal.ComputerName = computer;
         terminal.TerminalRole = role;
+
+        TerminalEntity cashTerminal;
+        if (terminal.CashTerminalId is not null)
+        {
+            cashTerminal = await context.Terminals.SingleOrDefaultAsync(
+                x => x.Id == terminal.CashTerminalId.Value, cancellationToken)
+                ?? throw new InvalidOperationException("The LAN terminal's cashier terminal mapping is missing.");
+        }
+        else
+        {
+            var codeSuffix = request.TerminalId.Replace("-", string.Empty)[..8].ToUpperInvariant();
+            var code = "LAN-" + codeSuffix;
+            cashTerminal = await context.Terminals.SingleOrDefaultAsync(
+                x => x.Code == code, cancellationToken)
+                ?? new TerminalEntity { Code = code, Name = name, IsActive = true };
+
+            if (cashTerminal.Id == 0)
+                context.Terminals.Add(cashTerminal);
+
+            await context.SaveChangesAsync(cancellationToken);
+            terminal.CashTerminalId = cashTerminal.Id;
+        }
+
+        cashTerminal.Name = name;
+        cashTerminal.IsActive = true;
         terminal.SecretHashBase64 = hash;
         terminal.IsActive = true;
         terminal.RevokedAt = null;
@@ -229,6 +254,23 @@ public sealed class LocalTerminalService(IDbContextFactory<PosDbContext> context
 
         entity.IsActive = active;
         entity.RevokedAt = active ? null : DateTimeOffset.UtcNow;
+
+        if (entity.CashTerminalId is not null)
+        {
+            var cashTerminal = await context.Terminals.SingleOrDefaultAsync(
+                x => x.Id == entity.CashTerminalId.Value, cancellationToken);
+            if (cashTerminal is not null) cashTerminal.IsActive = active;
+        }
+
+        if (!active)
+        {
+            var now = DateTimeOffset.UtcNow;
+            var activeSessions = await context.LanUserSessions
+                .Where(x => x.TerminalId == terminalId && x.RevokedAt == null)
+                .ToListAsync(cancellationToken);
+            foreach (var session in activeSessions) session.RevokedAt = now;
+        }
+
         await context.SaveChangesAsync(cancellationToken);
     }
 
@@ -240,7 +282,7 @@ public sealed class LocalTerminalService(IDbContextFactory<PosDbContext> context
         var permissions = JsonSerializer.Deserialize<string[]>(
             x.AllowedPermissionsJson, JsonOptions) ?? [];
         return new RegisteredLanTerminal(
-            x.Id, x.Name, x.ComputerName, x.TerminalRole, x.IsActive,
+            x.Id, x.Name, x.ComputerName, x.TerminalRole, x.CashTerminalId, x.IsActive,
             x.RegisteredAt, x.LastSeenAt, x.RevokedAt,
             permissions.ToHashSet(StringComparer.Ordinal));
     }

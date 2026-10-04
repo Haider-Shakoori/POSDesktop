@@ -1045,6 +1045,7 @@ CREATE TABLE IF NOT EXISTS registered_lan_terminals (
     Name TEXT NOT NULL,
     ComputerName TEXT NOT NULL,
     TerminalRole TEXT NOT NULL,
+    CashTerminalId INTEGER NULL,
     SecretHashBase64 TEXT NOT NULL,
     AllowedPermissionsJson TEXT NOT NULL DEFAULT '[]',
     IsActive INTEGER NOT NULL DEFAULT 1,
@@ -1054,6 +1055,9 @@ CREATE TABLE IF NOT EXISTS registered_lan_terminals (
 );
 CREATE INDEX IF NOT EXISTS IX_registered_lan_terminals_ComputerName
 ON registered_lan_terminals (ComputerName);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_registered_lan_terminals_CashTerminalId
+ON registered_lan_terminals (CashTerminalId)
+WHERE CashTerminalId IS NOT NULL;
 CREATE INDEX IF NOT EXISTS IX_registered_lan_terminals_active_seen
 ON registered_lan_terminals (IsActive, LastSeenAt);
 
@@ -1068,6 +1072,15 @@ CREATE TABLE IF NOT EXISTS lan_pairing_codes (
     MaxAttempts INTEGER NOT NULL DEFAULT 5
 );
 CREATE INDEX IF NOT EXISTS IX_lan_pairing_codes_ExpiresAt ON lan_pairing_codes (ExpiresAt);
+""", cancellationToken);
+
+        await EnsureColumnAsync(
+            context, "registered_lan_terminals", "CashTerminalId", "INTEGER NULL", cancellationToken);
+
+        await context.Database.ExecuteSqlRawAsync("""
+CREATE UNIQUE INDEX IF NOT EXISTS IX_registered_lan_terminals_CashTerminalId
+ON registered_lan_terminals (CashTerminalId)
+WHERE CashTerminalId IS NOT NULL;
 """, cancellationToken);
 
         await context.Database.ExecuteSqlRawAsync("""

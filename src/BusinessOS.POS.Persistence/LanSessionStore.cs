@@ -46,7 +46,9 @@ public sealed class LanSessionStore(IDbContextFactory<PosDbContext> contextFacto
         context.LanUserSessions.Add(entity);
         await context.SaveChangesAsync(cancellationToken);
 
-        return new LanSessionIssue(token, entity.ExpiresAt, ToSnapshot(user));
+        var terminalPermissions = ParsePermissions(terminal.AllowedPermissionsJson);
+        return new LanSessionIssue(
+            token, entity.ExpiresAt, ToEffectiveSnapshot(user, terminalPermissions));
     }
 
     public async Task<LanSessionPrincipal?> AuthenticateAsync(
@@ -80,13 +82,12 @@ public sealed class LanSessionStore(IDbContextFactory<PosDbContext> contextFacto
             .SingleOrDefaultAsync(x => x.Id == session.UserId && x.IsActive, cancellationToken);
         if (user is null) return null;
 
-        var terminalPermissions = JsonSerializer.Deserialize<string[]>(
-            terminal.AllowedPermissionsJson, JsonOptions) ?? [];
+        var terminalPermissions = ParsePermissions(terminal.AllowedPermissionsJson);
 
         return new LanSessionPrincipal(
             terminalId,
-            ToSnapshot(user),
-            terminalPermissions.ToHashSet(StringComparer.Ordinal),
+            ToEffectiveSnapshot(user, terminalPermissions),
+            terminalPermissions,
             session.ExpiresAt);
     }
 
@@ -118,15 +119,32 @@ public sealed class LanSessionStore(IDbContextFactory<PosDbContext> contextFacto
         await context.SaveChangesAsync(cancellationToken);
     }
 
-    private static UserSessionSnapshot ToSnapshot(UserEntity user) =>
-        new(
+    private static UserSessionSnapshot ToEffectiveSnapshot(
+        UserEntity user,
+        IReadOnlySet<string> terminalPermissions)
+    {
+        var userPermissions = user.Roles
+            .SelectMany(x => x.Permissions)
+            .Select(x => x.Name)
+            .ToHashSet(StringComparer.Ordinal);
+
+        var effective = terminalPermissions.Count == 0
+            ? userPermissions
+            : userPermissions.Where(terminalPermissions.Contains)
+                .ToHashSet(StringComparer.Ordinal);
+
+        return new UserSessionSnapshot(
             user.Id,
             user.Name,
             user.Username,
             user.PreferredLocale,
             user.Roles.Select(x => x.Name).ToHashSet(StringComparer.Ordinal),
-            user.Roles.SelectMany(x => x.Permissions).Select(x => x.Name)
-                .ToHashSet(StringComparer.Ordinal));
+            effective);
+    }
+
+    private static IReadOnlySet<string> ParsePermissions(string json) =>
+        (JsonSerializer.Deserialize<string[]>(json, JsonOptions) ?? [])
+            .ToHashSet(StringComparer.Ordinal);
 
     private static string Hash(string token) =>
         Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes(token)));

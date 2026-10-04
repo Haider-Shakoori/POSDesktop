@@ -1,6 +1,7 @@
 using System.Globalization;
 using BusinessOS.POS.Application.Abstractions.Authentication;
 using BusinessOS.POS.Application.Abstractions.Cash;
+using BusinessOS.POS.Application.Abstractions.Networking;
 using BusinessOS.POS.Domain.Authentication;
 using BusinessOS.POS.Persistence.Entities;
 using Microsoft.EntityFrameworkCore;
@@ -10,15 +11,19 @@ namespace BusinessOS.POS.Persistence;
 public sealed class LocalCashManagementService(
     IDbContextFactory<PosDbContext> contextFactory,
     IUserSessionService sessions,
-    IPermissionAuthorizer authorizer)
+    IPermissionAuthorizer authorizer,
+    IWorkstationContext workstation)
     : ICashManagementService
 {
     public async Task<IReadOnlyList<CashTerminalOption>> GetTerminalsAsync(CancellationToken cancellationToken = default)
     {
         authorizer.Demand("cash.view");
         await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
-        return await context.Terminals.AsNoTracking()
-            .OrderBy(x => x.Id)
+        var query = context.Terminals.AsNoTracking().AsQueryable();
+        if (workstation.CashTerminalId is not null && !authorizer.HasPermission("cash.manage"))
+            query = query.Where(x => x.Id == workstation.CashTerminalId.Value);
+
+        return await query.OrderBy(x => x.Id)
             .Select(x => new CashTerminalOption(x.Id, x.Code, x.Name, x.IsActive))
             .ToListAsync(cancellationToken);
     }
@@ -28,9 +33,12 @@ public sealed class LocalCashManagementService(
         authorizer.Demand("cash.view");
         var user = RequireUser();
         await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
-        var shift = await context.CashierShifts.AsNoTracking()
-            .Where(x => x.UserId == user.UserId && x.Status == "open")
-            .OrderByDescending(x => x.Id)
+        var query = context.CashierShifts.AsNoTracking()
+            .Where(x => x.UserId == user.UserId && x.Status == "open");
+        if (workstation.CashTerminalId is not null)
+            query = query.Where(x => x.TerminalId == workstation.CashTerminalId.Value);
+
+        var shift = await query.OrderByDescending(x => x.Id)
             .FirstOrDefaultAsync(cancellationToken);
         return shift is null ? null : await LoadShiftDetailAsync(context, shift.Id, cancellationToken);
     }
@@ -76,6 +84,11 @@ public sealed class LocalCashManagementService(
             await transaction.CommitAsync(cancellationToken);
             return (await LoadShiftDetailAsync(context, existing.Id, cancellationToken))!;
         }
+
+        if (workstation.CashTerminalId is not null &&
+            request.TerminalId != workstation.CashTerminalId.Value &&
+            !authorizer.HasPermission("cash.manage"))
+            throw new InvalidOperationException("This workstation can open only its assigned cashier terminal.");
 
         var terminal = await context.Terminals.SingleOrDefaultAsync(
             x => x.Id == request.TerminalId && x.IsActive, cancellationToken)

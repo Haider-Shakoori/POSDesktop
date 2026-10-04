@@ -58,6 +58,7 @@ public static class DependencyInjection
         services.AddScoped<IReportingService, LocalReportingService>();
         services.AddSingleton<ILocalTerminalService, LocalTerminalService>();
         services.AddSingleton<ILanSessionStore, LanSessionStore>();
+        services.AddScoped<IWorkstationContext, LocalWorkstationContext>();
         services.AddScoped<IPurchasingService, LocalPurchasingService>();
 
         return services;
