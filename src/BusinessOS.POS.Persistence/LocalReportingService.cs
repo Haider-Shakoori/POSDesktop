@@ -362,9 +362,11 @@ public sealed class LocalReportingService(
             ? []
             : await context.BusinessDayClosures.AsNoTracking()
                 .Where(x => dayIds.Contains(x.BusinessDayId))
-                .OrderByDescending(x => x.ClosedAt)
-                .Take(30)
                 .ToListAsync(cancellationToken);
+        closures = closures
+            .OrderByDescending(x => x.ClosedAt)
+            .Take(30)
+            .ToList();
         var closingHistory = closures.Select(x => new ClosingHistoryRow(
             x.Id,
             dayMap[x.BusinessDayId].BusinessDate,
