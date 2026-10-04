@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
+using System.IO;
 using System.Text;
 using BusinessOS.POS.Application.Abstractions.Reporting;
 using CommunityToolkit.Mvvm.ComponentModel;
