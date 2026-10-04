@@ -7,6 +7,9 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\BusinessOS.POS.Domain\BusinessOS.POS.Domain.csproj" />
     <ProjectReference Include="..\..\src\BusinessOS.POS.Application\BusinessOS.POS.Application.csproj" />
+    <ProjectReference Include="..\..\src\BusinessOS.POS.Infrastructure\BusinessOS.POS.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\BusinessOS.POS.LocalClient\BusinessOS.POS.LocalClient.csproj" />
+    <ProjectReference Include="..\..\src\BusinessOS.POS.LocalServer\BusinessOS.POS.LocalServer.csproj" />
     <ProjectReference Include="..\..\src\BusinessOS.POS.Persistence\BusinessOS.POS.Persistence.csproj" />
   </ItemGroup>
   <ItemGroup>
