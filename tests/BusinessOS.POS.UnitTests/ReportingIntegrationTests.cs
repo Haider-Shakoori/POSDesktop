@@ -28,7 +28,7 @@ public sealed class ReportingIntegrationTests
             long categoryId;
             await using (var context = await factory.CreateDbContextAsync())
             {
-                var category = new CategoryEntity
+                var categoryEntity = new CategoryEntity
                 {
                     NameEn = "Beverages",
                     NameFa = "نوشیدنی",
@@ -36,9 +36,9 @@ public sealed class ReportingIntegrationTests
                     SortOrder = 10,
                     IsActive = true,
                 };
-                context.Categories.Add(category);
+                context.Categories.Add(categoryEntity);
                 await context.SaveChangesAsync();
-                categoryId = category.Id;
+                categoryId = categoryEntity.Id;
             }
 
             var product = await CreateProductAsync(provider, "REPORT", 30m, categoryId, 2m);
@@ -118,11 +118,11 @@ public sealed class ReportingIntegrationTests
             Assert.Equal(10m, top.Cogs);
             Assert.Equal(20m, top.GrossProfit);
 
-            var category = Assert.Single(report.CategoryProfit);
-            Assert.Equal(categoryId, category.CategoryId);
-            Assert.Equal(30m, category.NetSales);
-            Assert.Equal(10m, category.Cogs);
-            Assert.Equal(20m, category.GrossProfit);
+            var categoryRow = Assert.Single(report.CategoryProfit);
+            Assert.Equal(categoryId, categoryRow.CategoryId);
+            Assert.Equal(30m, categoryRow.NetSales);
+            Assert.Equal(10m, categoryRow.Cogs);
+            Assert.Equal(20m, categoryRow.GrossProfit);
 
             var trend = Assert.Single(report.SalesTrend);
             Assert.Equal(DateTime.Today, trend.Day);
