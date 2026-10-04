@@ -12,6 +12,7 @@
         xmlns:sales="clr-namespace:BusinessOS.POS.Desktop.Sales"
         xmlns:customers="clr-namespace:BusinessOS.POS.Desktop.Customers"
         xmlns:purchasing="clr-namespace:BusinessOS.POS.Desktop.Purchasing"
+        xmlns:terminals="clr-namespace:BusinessOS.POS.Desktop.Terminals"
         Title="BusinessOS POS"
         Width="1440"
         Height="900"
@@ -65,6 +66,10 @@
 
         <DataTemplate x:Key="ReportsTemplate">
             <reports:ReportsView DataContext="{Binding DataContext.Reports, RelativeSource={RelativeSource AncestorType=Window}}" />
+        </DataTemplate>
+
+        <DataTemplate x:Key="TerminalsTemplate">
+            <terminals:TerminalsView DataContext="{Binding DataContext.Terminals, RelativeSource={RelativeSource AncestorType=Window}}" />
         </DataTemplate>
 
         <DataTemplate x:Key="ModuleTemplate">
@@ -250,6 +255,9 @@
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding SelectedNavigation.Key}" Value="reports">
                                     <Setter Property="ContentTemplate" Value="{StaticResource ReportsTemplate}" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectedNavigation.Key}" Value="terminals">
+                                    <Setter Property="ContentTemplate" Value="{StaticResource TerminalsTemplate}" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
