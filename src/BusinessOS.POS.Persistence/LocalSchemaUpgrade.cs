@@ -458,6 +458,20 @@ CREATE TABLE IF NOT EXISTS terminal_pairing_codes (
 );
 CREATE INDEX IF NOT EXISTS IX_terminal_pairing_codes_used_expiry
 ON terminal_pairing_codes (UsedAt, ExpiresAt);
+
+CREATE TABLE IF NOT EXISTS lan_sessions (
+    Id TEXT NOT NULL CONSTRAINT PK_lan_sessions PRIMARY KEY,
+    TerminalId TEXT NOT NULL,
+    UserId INTEGER NOT NULL,
+    TokenHash TEXT NOT NULL,
+    CreatedAt TEXT NOT NULL,
+    ExpiresAt TEXT NOT NULL,
+    LastSeenAt TEXT NULL,
+    RevokedAt TEXT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_lan_sessions_TokenHash ON lan_sessions (TokenHash);
+CREATE INDEX IF NOT EXISTS IX_lan_sessions_terminal_user_revoked
+ON lan_sessions (TerminalId, UserId, RevokedAt);
 """;
         await context.Database.ExecuteSqlRawAsync(networkSql, cancellationToken);
 

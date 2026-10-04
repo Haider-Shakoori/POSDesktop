@@ -43,6 +43,7 @@ public sealed class PosDbContext(DbContextOptions<PosDbContext> options) : DbCon
     public DbSet<LocalServerIdentityEntity> LocalServerIdentities => Set<LocalServerIdentityEntity>();
     public DbSet<RegisteredTerminalEntity> RegisteredTerminals => Set<RegisteredTerminalEntity>();
     public DbSet<TerminalPairingCodeEntity> TerminalPairingCodes => Set<TerminalPairingCodeEntity>();
+    public DbSet<LanSessionEntity> LanSessions => Set<LanSessionEntity>();
     public DbSet<CashierShiftEntity> CashierShifts => Set<CashierShiftEntity>();
     public DbSet<CashMovementEntity> CashMovements => Set<CashMovementEntity>();
     public DbSet<CashierShiftClosureEntity> CashierShiftClosures => Set<CashierShiftClosureEntity>();
@@ -425,6 +426,15 @@ public sealed class PosDbContext(DbContextOptions<PosDbContext> options) : DbCon
         pairingCode.Property(x => x.SaltBase64).HasMaxLength(128).IsRequired();
         pairingCode.Property(x => x.CodeHashBase64).HasMaxLength(128).IsRequired();
         pairingCode.HasIndex(x => new { x.UsedAt, x.ExpiresAt });
+
+        var lanSession = modelBuilder.Entity<LanSessionEntity>();
+        lanSession.ToTable("lan_sessions");
+        lanSession.HasKey(x => x.Id);
+        lanSession.Property(x => x.Id).HasMaxLength(80);
+        lanSession.Property(x => x.TerminalId).HasMaxLength(80).IsRequired();
+        lanSession.Property(x => x.TokenHash).HasMaxLength(128).IsRequired();
+        lanSession.HasIndex(x => x.TokenHash).IsUnique();
+        lanSession.HasIndex(x => new { x.TerminalId, x.UserId, x.RevokedAt });
 
         var shift = modelBuilder.Entity<CashierShiftEntity>();
         shift.ToTable("cashier_shifts");
