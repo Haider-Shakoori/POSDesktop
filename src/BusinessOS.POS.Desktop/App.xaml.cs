@@ -36,6 +36,7 @@ public partial class App : System.Windows.Application
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton<IApplicationPaths, ApplicationPaths>();
+                    services.AddBusinessOSPosInfrastructure();
                     services.AddBusinessOSPosPersistence();
                     services.AddTransient<LoginViewModel>();
                     services.AddTransient<OwnerSetupViewModel>();

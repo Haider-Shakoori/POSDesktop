@@ -1031,6 +1031,46 @@ WHERE NormalizedBusinessDate IS NOT NULL
         await context.Database.ExecuteSqlRawAsync(closingSql, cancellationToken);
 
         await context.Database.ExecuteSqlRawAsync("""
+CREATE TABLE IF NOT EXISTS lan_server_identity (
+    Id INTEGER NOT NULL CONSTRAINT PK_lan_server_identity PRIMARY KEY AUTOINCREMENT,
+    ServerId TEXT NOT NULL,
+    ServerName TEXT NOT NULL,
+    CreatedAt TEXT NOT NULL,
+    UpdatedAt TEXT NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS IX_lan_server_identity_ServerId ON lan_server_identity (ServerId);
+
+CREATE TABLE IF NOT EXISTS registered_lan_terminals (
+    Id TEXT NOT NULL CONSTRAINT PK_registered_lan_terminals PRIMARY KEY,
+    Name TEXT NOT NULL,
+    ComputerName TEXT NOT NULL,
+    TerminalRole TEXT NOT NULL,
+    SecretHashBase64 TEXT NOT NULL,
+    AllowedPermissionsJson TEXT NOT NULL DEFAULT '[]',
+    IsActive INTEGER NOT NULL DEFAULT 1,
+    RegisteredAt TEXT NOT NULL,
+    LastSeenAt TEXT NULL,
+    RevokedAt TEXT NULL
+);
+CREATE INDEX IF NOT EXISTS IX_registered_lan_terminals_ComputerName
+ON registered_lan_terminals (ComputerName);
+CREATE INDEX IF NOT EXISTS IX_registered_lan_terminals_active_seen
+ON registered_lan_terminals (IsActive, LastSeenAt);
+
+CREATE TABLE IF NOT EXISTS lan_pairing_codes (
+    Id TEXT NOT NULL CONSTRAINT PK_lan_pairing_codes PRIMARY KEY,
+    SaltBase64 TEXT NOT NULL,
+    CodeHashBase64 TEXT NOT NULL,
+    CreatedAt TEXT NOT NULL,
+    ExpiresAt TEXT NOT NULL,
+    UsedAt TEXT NULL,
+    FailedAttempts INTEGER NOT NULL DEFAULT 0,
+    MaxAttempts INTEGER NOT NULL DEFAULT 5
+);
+CREATE INDEX IF NOT EXISTS IX_lan_pairing_codes_ExpiresAt ON lan_pairing_codes (ExpiresAt);
+""", cancellationToken);
+
+        await context.Database.ExecuteSqlRawAsync("""
 UPDATE sales
 SET BalanceDue = CASE
     WHEN CAST(NetTotal AS REAL) > CAST(PaidAmount AS REAL)

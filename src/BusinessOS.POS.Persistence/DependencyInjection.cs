@@ -6,6 +6,7 @@ using BusinessOS.POS.Application.Abstractions.Dashboard;
 using BusinessOS.POS.Application.Abstractions.Reporting;
 using BusinessOS.POS.Application.Abstractions.Customers;
 using BusinessOS.POS.Application.Abstractions.Inventory;
+using BusinessOS.POS.Application.Abstractions.Networking;
 using BusinessOS.POS.Application.Abstractions.Persistence;
 using BusinessOS.POS.Application.Abstractions.Purchasing;
 using BusinessOS.POS.Application.Abstractions.Sales;
@@ -55,6 +56,7 @@ public static class DependencyInjection
         services.AddSingleton<IBusinessDayClosingService, LocalBusinessDayClosingService>();
         services.AddSingleton<IDashboardService, LocalDashboardService>();
         services.AddSingleton<IReportingService, LocalReportingService>();
+        services.AddSingleton<ILocalTerminalService, LocalTerminalService>();
         services.AddSingleton<IPurchasingService, LocalPurchasingService>();
 
         return services;

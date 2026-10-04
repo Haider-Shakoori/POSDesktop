@@ -56,6 +56,9 @@ public sealed class PosDbContext(DbContextOptions<PosDbContext> options) : DbCon
     public DbSet<SaleReturnEntity> SaleReturns => Set<SaleReturnEntity>();
     public DbSet<SaleReturnItemEntity> SaleReturnItems => Set<SaleReturnItemEntity>();
     public DbSet<SaleRefundEntity> SaleRefunds => Set<SaleRefundEntity>();
+    public DbSet<LanServerIdentityEntity> LanServerIdentities => Set<LanServerIdentityEntity>();
+    public DbSet<RegisteredLanTerminalEntity> RegisteredLanTerminals => Set<RegisteredLanTerminalEntity>();
+    public DbSet<LanPairingCodeEntity> LanPairingCodes => Set<LanPairingCodeEntity>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -390,6 +393,33 @@ public sealed class PosDbContext(DbContextOptions<PosDbContext> options) : DbCon
         writeoffItem.HasKey(x => x.Id);
         writeoffItem.Property(x => x.QuantityBase).HasPrecision(20, 6);
         writeoffItem.Property(x => x.CostAmount).HasPrecision(18, 4);
+
+        var lanServer = modelBuilder.Entity<LanServerIdentityEntity>();
+        lanServer.ToTable("lan_server_identity");
+        lanServer.HasKey(x => x.Id);
+        lanServer.Property(x => x.ServerId).HasMaxLength(64).IsRequired();
+        lanServer.Property(x => x.ServerName).HasMaxLength(160).IsRequired();
+        lanServer.HasIndex(x => x.ServerId).IsUnique();
+
+        var lanTerminal = modelBuilder.Entity<RegisteredLanTerminalEntity>();
+        lanTerminal.ToTable("registered_lan_terminals");
+        lanTerminal.HasKey(x => x.Id);
+        lanTerminal.Property(x => x.Id).HasMaxLength(64);
+        lanTerminal.Property(x => x.Name).HasMaxLength(160).IsRequired();
+        lanTerminal.Property(x => x.ComputerName).HasMaxLength(160).IsRequired();
+        lanTerminal.Property(x => x.TerminalRole).HasMaxLength(100).IsRequired();
+        lanTerminal.Property(x => x.SecretHashBase64).HasMaxLength(128).IsRequired();
+        lanTerminal.Property(x => x.AllowedPermissionsJson).IsRequired();
+        lanTerminal.HasIndex(x => x.ComputerName);
+        lanTerminal.HasIndex(x => new { x.IsActive, x.LastSeenAt });
+
+        var lanPairing = modelBuilder.Entity<LanPairingCodeEntity>();
+        lanPairing.ToTable("lan_pairing_codes");
+        lanPairing.HasKey(x => x.Id);
+        lanPairing.Property(x => x.Id).HasMaxLength(64);
+        lanPairing.Property(x => x.SaltBase64).HasMaxLength(128).IsRequired();
+        lanPairing.Property(x => x.CodeHashBase64).HasMaxLength(128).IsRequired();
+        lanPairing.HasIndex(x => x.ExpiresAt);
 
         var terminal = modelBuilder.Entity<TerminalEntity>();
         terminal.ToTable("terminals");
