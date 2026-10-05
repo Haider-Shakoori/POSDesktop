@@ -115,6 +115,14 @@
    </TabItem>
 
    <TabItem Header="Audit">
+    <TabItem.Style>
+     <Style TargetType="TabItem">
+      <Setter Property="Visibility" Value="Visible"/>
+      <Style.Triggers>
+       <DataTrigger Binding="{Binding CanViewAudit}" Value="False"><Setter Property="Visibility" Value="Collapsed"/></DataTrigger>
+      </Style.Triggers>
+     </Style>
+    </TabItem.Style>
     <Border Style="{StaticResource CardBorderStyle}" Padding="0">
      <Grid>
       <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
