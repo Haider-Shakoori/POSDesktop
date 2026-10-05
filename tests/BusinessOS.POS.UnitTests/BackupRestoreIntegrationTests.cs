@@ -41,7 +41,7 @@ public sealed class BackupRestoreIntegrationTests
             {
                 await connection.OpenAsync();
                 await using var update = connection.CreateCommand();
-                update.CommandText = "UPDATE users SET Name = 'Changed Owner' WHERE NormalizedUsername = 'OWNER';";
+                update.CommandText = "UPDATE users SET Name = 'Changed Owner' WHERE NormalizedUsername = 'owner';";
                 Assert.Equal(1, await update.ExecuteNonQueryAsync());
             }
 
@@ -53,7 +53,7 @@ public sealed class BackupRestoreIntegrationTests
             {
                 await connection.OpenAsync();
                 await using var query = connection.CreateCommand();
-                query.CommandText = "SELECT Name FROM users WHERE NormalizedUsername = 'OWNER';";
+                query.CommandText = "SELECT Name FROM users WHERE NormalizedUsername = 'owner';";
                 Assert.Equal("Original Owner", Convert.ToString(await query.ExecuteScalarAsync()));
             }
         }
