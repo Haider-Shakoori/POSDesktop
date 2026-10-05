@@ -57,7 +57,7 @@ public sealed class UserAccessIntegrationTests
                 access.SaveUserAsync(new UserSaveRequest(
                     owner.Id, owner.Name, owner.Username, owner.Email, owner.PreferredLocale,
                     false, [ownerRole.Id], null)));
-            Assert.Contains("last active owner", deactivate.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("own signed-in account", deactivate.Message, StringComparison.OrdinalIgnoreCase);
 
             var removeOwner = await Assert.ThrowsAsync<InvalidOperationException>(() =>
                 access.SaveUserAsync(new UserSaveRequest(
