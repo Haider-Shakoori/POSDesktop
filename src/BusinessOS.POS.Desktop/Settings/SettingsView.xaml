@@ -1,0 +1,113 @@
+<UserControl x:Class="BusinessOS.POS.Desktop.Settings.SettingsView"
+ xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+ xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+ Loaded="OnLoaded">
+ <Grid>
+  <Grid.RowDefinitions>
+   <RowDefinition Height="Auto"/>
+   <RowDefinition Height="12"/>
+   <RowDefinition Height="*"/>
+  </Grid.RowDefinitions>
+
+  <Border Style="{StaticResource CardBorderStyle}">
+   <Grid>
+    <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+    <StackPanel>
+     <TextBlock Text="BusinessOS POS Settings" Style="{StaticResource SectionTitleStyle}"/>
+     <TextBlock Text="{Binding StatusMessage}" Style="{StaticResource MutedTextStyle}" TextWrapping="Wrap" Margin="0,6,0,0"/>
+    </StackPanel>
+    <StackPanel Grid.Column="1" HorizontalAlignment="Right">
+     <TextBlock Text="{Binding DeploymentMode, StringFormat=Mode: {0}}" FontWeight="SemiBold"/>
+     <TextBlock Text="{Binding CurrentVersion, StringFormat=Version: {0}}" Style="{StaticResource MutedTextStyle}" Margin="0,4,0,0"/>
+    </StackPanel>
+   </Grid>
+  </Border>
+
+  <TabControl Grid.Row="2">
+   <TabItem Header="Backup &amp; Restore">
+    <Grid Margin="12">
+     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="16"/><ColumnDefinition Width="330"/></Grid.ColumnDefinitions>
+     <DataGrid ItemsSource="{Binding Backups}"
+               SelectedItem="{Binding SelectedBackup}"
+               AutoGenerateColumns="False"
+               IsReadOnly="True">
+      <DataGrid.Columns>
+       <DataGridTextColumn Header="Backup" Binding="{Binding FileName}" Width="*"/>
+       <DataGridTextColumn Header="Kind" Binding="{Binding Kind}" Width="100"/>
+       <DataGridTextColumn Header="Created" Binding="{Binding CreatedAt, StringFormat=g}" Width="150"/>
+       <DataGridTextColumn Header="Size" Binding="{Binding Length, StringFormat=N0}" Width="100"/>
+      </DataGrid.Columns>
+     </DataGrid>
+
+     <Border Grid.Column="2" Style="{StaticResource CardBorderStyle}">
+      <StackPanel>
+       <TextBlock Text="Database protection" Style="{StaticResource SectionTitleStyle}"/>
+       <TextBlock Text="Backups use SQLite's online backup engine, integrity checking and SHA-256 manifests. Restore always creates a pre-restore safety backup first."
+                  TextWrapping="Wrap" Style="{StaticResource MutedTextStyle}" Margin="0,6,0,14"/>
+       <Button Content="Create verified backup"
+               Command="{Binding CreateBackupCommand}"
+               IsEnabled="{Binding CanManageBackups}"
+               Style="{StaticResource PrimaryButtonStyle}"/>
+       <Button Content="Verify selected backup"
+               Command="{Binding VerifyBackupCommand}"
+               IsEnabled="{Binding CanManageBackups}"
+               Style="{StaticResource SecondaryButtonStyle}" Margin="0,8,0,0"/>
+       <TextBlock Text="Type RESTORE to enable database replacement:"
+                  Style="{StaticResource MutedTextStyle}" Margin="0,18,0,4"/>
+       <TextBox Text="{Binding RestoreConfirmation, UpdateSourceTrigger=PropertyChanged}"/>
+       <Button Content="Restore selected backup"
+               Command="{Binding RestoreBackupCommand}"
+               IsEnabled="{Binding CanRestore}"
+               Style="{StaticResource SecondaryButtonStyle}" Margin="0,8,0,0"/>
+      </StackPanel>
+     </Border>
+    </Grid>
+   </TabItem>
+
+   <TabItem Header="Updates">
+    <Grid Margin="12">
+     <Grid.ColumnDefinitions><ColumnDefinition Width="*"/><ColumnDefinition Width="16"/><ColumnDefinition Width="330"/></Grid.ColumnDefinitions>
+     <Border Style="{StaticResource CardBorderStyle}">
+      <StackPanel>
+       <TextBlock Text="Stable update channel" Style="{StaticResource SectionTitleStyle}"/>
+       <TextBlock Text="Updates are accepted only from HTTPS, only after RSA-PSS manifest signature verification, and only when the downloaded ZIP matches its SHA-256 checksum."
+                  TextWrapping="Wrap" Style="{StaticResource MutedTextStyle}" Margin="0,6,0,18"/>
+       <Grid>
+        <Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition/></Grid.ColumnDefinitions>
+        <StackPanel>
+         <TextBlock Text="Current version" Style="{StaticResource MutedTextStyle}"/>
+         <TextBlock Text="{Binding CurrentVersion}" FontSize="24" FontWeight="Bold"/>
+        </StackPanel>
+        <StackPanel Grid.Column="1">
+         <TextBlock Text="Available version" Style="{StaticResource MutedTextStyle}"/>
+         <TextBlock Text="{Binding AvailableVersion}" FontSize="24" FontWeight="Bold"/>
+        </StackPanel>
+       </Grid>
+       <TextBlock Text="Release notes" Style="{StaticResource MutedTextStyle}" Margin="0,20,0,4"/>
+       <TextBox Text="{Binding ReleaseNotes}" IsReadOnly="True" TextWrapping="Wrap" AcceptsReturn="True" MinHeight="160"/>
+      </StackPanel>
+     </Border>
+
+     <Border Grid.Column="2" Style="{StaticResource CardBorderStyle}">
+      <StackPanel>
+       <TextBlock Text="Update actions" Style="{StaticResource SectionTitleStyle}"/>
+       <Button Content="Check for updates"
+               Command="{Binding CheckForUpdatesCommand}"
+               Style="{StaticResource PrimaryButtonStyle}" Margin="0,14,0,0"/>
+       <Button Content="Download &amp; verify"
+               Command="{Binding DownloadUpdateCommand}"
+               IsEnabled="{Binding CanDownloadUpdate}"
+               Style="{StaticResource SecondaryButtonStyle}" Margin="0,8,0,0"/>
+       <Button Content="Install verified update"
+               Command="{Binding InstallUpdateCommand}"
+               IsEnabled="{Binding CanInstallUpdate}"
+               Style="{StaticResource SecondaryButtonStyle}" Margin="0,8,0,0"/>
+       <TextBlock Text="Standalone/Main Server creates a pre-update database backup before installation. Client Terminal does not replace server data."
+                  TextWrapping="Wrap" Style="{StaticResource MutedTextStyle}" Margin="0,16,0,0"/>
+      </StackPanel>
+     </Border>
+    </Grid>
+   </TabItem>
+  </TabControl>
+ </Grid>
+</UserControl>
