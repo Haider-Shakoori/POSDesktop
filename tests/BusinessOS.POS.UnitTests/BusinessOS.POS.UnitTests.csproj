@@ -8,6 +8,7 @@
     <ProjectReference Include="..\..\src\BusinessOS.POS.Domain\BusinessOS.POS.Domain.csproj" />
     <ProjectReference Include="..\..\src\BusinessOS.POS.Application\BusinessOS.POS.Application.csproj" />
     <ProjectReference Include="..\..\src\BusinessOS.POS.Persistence\BusinessOS.POS.Persistence.csproj" />
+    <ProjectReference Include="..\..\src\BusinessOS.POS.Infrastructure\BusinessOS.POS.Infrastructure.csproj" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />

@@ -15,6 +15,9 @@ using BusinessOS.POS.Desktop.Sales;
 using BusinessOS.POS.Desktop.Pos;
 using BusinessOS.POS.Desktop.Purchasing;
 using BusinessOS.POS.Infrastructure;
+using BusinessOS.POS.Infrastructure.Networking;
+using BusinessOS.POS.Application.Abstractions.Networking;
+using BusinessOS.POS.Desktop.Terminals;
 using BusinessOS.POS.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -36,6 +39,10 @@ public partial class App : System.Windows.Application
                 .ConfigureServices(services =>
                 {
                     services.AddSingleton<IApplicationPaths, ApplicationPaths>();
+                    services.AddSingleton<INetworkConfigurationStore, NetworkConfigurationStore>();
+                    services.AddSingleton<INetworkSecretStore, WindowsNetworkSecretStore>();
+                    services.AddSingleton<ILanTerminalRegistry, FileLanTerminalRegistry>();
+                    services.AddSingleton<ILanClientService, LanClientService>();
                     services.AddBusinessOSPosPersistence();
                     services.AddTransient<LoginViewModel>();
                     services.AddTransient<OwnerSetupViewModel>();
@@ -49,6 +56,7 @@ public partial class App : System.Windows.Application
                     services.AddTransient<DailyClosingViewModel>();
                     services.AddTransient<DashboardViewModel>();
                     services.AddTransient<ReportsViewModel>();
+                    services.AddTransient<TerminalsViewModel>();
                     services.AddTransient<ExpensesViewModel>();
                     services.AddSingleton<IReceiptPrintService, WpfReceiptPrintService>();
                     services.AddTransient<MainWindowViewModel>();
