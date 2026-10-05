@@ -11,6 +11,7 @@ using BusinessOS.POS.Application.Abstractions.Persistence;
 using BusinessOS.POS.Application.Abstractions.Purchasing;
 using BusinessOS.POS.Application.Abstractions.Sales;
 using BusinessOS.POS.Application.Abstractions.Storage;
+using BusinessOS.POS.Application.Abstractions.Users;
 using BusinessOS.POS.Persistence.Security;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
@@ -58,6 +59,7 @@ public static class DependencyInjection
         services.AddSingleton<IReportingService, LocalReportingService>();
         services.AddSingleton<IPurchasingService, LocalPurchasingService>();
         services.AddSingleton<ILocalBackupService, LocalBackupService>();
+        services.AddSingleton<IUserAccessService, LocalUserAccessService>();
 
         return services;
     }
