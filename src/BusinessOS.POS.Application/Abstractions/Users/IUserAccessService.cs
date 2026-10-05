@@ -36,6 +36,7 @@ public sealed record AccessAuditRow(
     DateTimeOffset CreatedAt);
 
 public sealed record UserAccessSnapshot(
+    bool CanViewAudit,
     IReadOnlyList<AccessUserRow> Users,
     IReadOnlyList<AccessRoleRow> Roles,
     IReadOnlyList<AccessPermissionRow> Permissions,
