@@ -172,7 +172,7 @@ public sealed class FinalGoldenPathUatTests
                 Assert.Equal(9m, remaining);
             }
 
-            var backup = await backups.CreateAsync("uat");
+            var backup = await backups.CreateAsync("manual");
             Assert.True(backup.IsVerified);
             Assert.True(File.Exists(backup.FullPath));
             var verification = await backups.VerifyAsync(backup.FullPath);
