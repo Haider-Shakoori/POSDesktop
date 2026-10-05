@@ -37,10 +37,13 @@ public sealed partial class LocalUserAccessService(
             .OrderBy(x => x.Name)
             .ToListAsync(cancellationToken);
 
-        var audits = await context.AuditLogs.AsNoTracking()
-            .OrderByDescending(x => x.Id)
-            .Take(200)
-            .ToListAsync(cancellationToken);
+        var canViewAudit = authorizer.HasPermission("audit.view");
+        var audits = canViewAudit
+            ? await context.AuditLogs.AsNoTracking()
+                .OrderByDescending(x => x.Id)
+                .Take(200)
+                .ToListAsync(cancellationToken)
+            : [];
         var actorIds = audits.Where(x => x.ActorUserId is not null)
             .Select(x => x.ActorUserId!.Value)
             .Distinct()
@@ -52,6 +55,7 @@ public sealed partial class LocalUserAccessService(
                 .ToDictionaryAsync(x => x.Id, x => x.Name, cancellationToken);
 
         return new UserAccessSnapshot(
+            canViewAudit,
             users.Select(MapUser).ToList(),
             roles.Select(MapRole).ToList(),
             permissions.Select(x => new AccessPermissionRow(x.Id, x.Name, x.Label)).ToList(),
