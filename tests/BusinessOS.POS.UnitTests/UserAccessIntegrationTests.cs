@@ -128,6 +128,34 @@ public sealed class UserAccessIntegrationTests
         finally { Cleanup(root); }
     }
 
+    [Fact]
+    public async Task User_manager_without_audit_permission_cannot_read_audit_history()
+    {
+        var root = NewRoot();
+        try
+        {
+            await using var provider = await BuildProviderAsync(root);
+            var access = provider.GetRequiredService<IUserAccessService>();
+            var snapshot = await access.GetAsync();
+            var usersManage = snapshot.Permissions.Single(x => x.Name == "users.manage");
+
+            var role = await access.SaveRoleAsync(new RoleSaveRequest(
+                null, "user_manager", "User Manager", [usersManage.Id]));
+            await access.SaveUserAsync(new UserSaveRequest(
+                null, "Limited User Manager", "usermanager", null, "en", true,
+                [role.Id], "Password-123"));
+
+            var sessions = provider.GetRequiredService<IUserSessionService>();
+            await sessions.LogoutAsync();
+            await sessions.LoginAsync("usermanager", "Password-123");
+
+            var limited = await access.GetAsync();
+            Assert.False(limited.CanViewAudit);
+            Assert.Empty(limited.Audit);
+        }
+        finally { Cleanup(root); }
+    }
+
     private static async Task<ServiceProvider> BuildProviderAsync(string root)
     {
         var services = new ServiceCollection();
