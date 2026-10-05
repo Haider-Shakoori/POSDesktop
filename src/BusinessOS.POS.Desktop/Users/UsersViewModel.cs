@@ -50,6 +50,7 @@ public sealed partial class UsersViewModel : ObservableObject
     [ObservableProperty] private bool _roleIsSystem;
     [ObservableProperty] private string _statusMessage = "Ready.";
     [ObservableProperty] private bool _isBusy;
+    [ObservableProperty] private bool _canViewAudit;
 
     public string UserEditorTitle => EditingUserId is null ? "New user" : "Edit user";
     public string RoleEditorTitle => EditingRoleId is null ? "New custom role" : "Edit custom role";
@@ -100,6 +101,7 @@ public sealed partial class UsersViewModel : ObservableObject
             var selectedUserId = SelectedUser?.Id;
             var selectedRoleId = SelectedRole?.Id;
             var snapshot = await _access.GetAsync();
+            CanViewAudit = snapshot.CanViewAudit;
 
             Users.Clear();
             foreach (var user in snapshot.Users) Users.Add(user);
@@ -219,6 +221,7 @@ public sealed partial class UsersViewModel : ObservableObject
     private async Task RefreshCoreAsync(long? userId, long? roleId)
     {
         var snapshot = await _access.GetAsync();
+        CanViewAudit = snapshot.CanViewAudit;
 
         Users.Clear();
         foreach (var user in snapshot.Users) Users.Add(user);
