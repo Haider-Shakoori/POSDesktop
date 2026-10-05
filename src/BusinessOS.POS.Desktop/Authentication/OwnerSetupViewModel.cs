@@ -1,5 +1,6 @@
 using BusinessOS.POS.Application.Abstractions.Authentication;
 using CommunityToolkit.Mvvm.ComponentModel;
+using WpfFlowDirection = System.Windows.FlowDirection;
 
 namespace BusinessOS.POS.Desktop.Authentication;
 
@@ -13,6 +14,9 @@ public sealed partial class OwnerSetupViewModel(IOwnerBootstrapService bootstrap
 
     [ObservableProperty]
     private string selectedLanguage = "English";
+
+    [ObservableProperty]
+    private WpfFlowDirection flowDirection = WpfFlowDirection.LeftToRight;
 
     [ObservableProperty]
     private bool isBusy;
@@ -30,6 +34,11 @@ public sealed partial class OwnerSetupViewModel(IOwnerBootstrapService bootstrap
     public bool IsNotBusy => !IsBusy;
 
     partial void OnIsBusyChanged(bool value) => OnPropertyChanged(nameof(IsNotBusy));
+
+    partial void OnSelectedLanguageChanged(string value) =>
+        FlowDirection = value is "دری" or "پښتو"
+            ? WpfFlowDirection.RightToLeft
+            : WpfFlowDirection.LeftToRight;
 
     public async Task CreateAsync(string password, string confirmation)
     {
