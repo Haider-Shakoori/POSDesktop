@@ -3,6 +3,7 @@ using BusinessOS.POS.Application.Abstractions.Backup;
 using BusinessOS.POS.Application.Abstractions.Networking;
 using BusinessOS.POS.Application.Abstractions.Storage;
 using BusinessOS.POS.Application.Abstractions.Updates;
+using NetworkMode = BusinessOS.POS.Application.Abstractions.Networking.DeploymentMode;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
@@ -51,7 +52,7 @@ public partial class SettingsViewModel(
         {
             var network = await networkConfigurations.LoadAsync();
             DeploymentMode = network.Mode.ToString();
-            CanManageBackups = network.Mode != Networking.DeploymentMode.Client;
+            CanManageBackups = network.Mode != NetworkMode.Client;
 
             Backups.Clear();
             if (CanManageBackups)
@@ -149,7 +150,7 @@ public partial class SettingsViewModel(
             var network = await networkConfigurations.LoadAsync();
             string? preUpdateBackup = null;
 
-            if (network.Mode != Networking.DeploymentMode.Client)
+            if (network.Mode != NetworkMode.Client)
             {
                 var snapshot = await backups.CreateAsync("pre-update");
                 preUpdateBackup = snapshot.FullPath;
