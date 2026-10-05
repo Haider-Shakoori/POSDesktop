@@ -6,12 +6,13 @@
         Height="740"
         ResizeMode="NoResize"
         WindowStartupLocation="CenterScreen"
-        Background="{DynamicResource AppBackgroundBrush}">
+        Background="{DynamicResource AppBackgroundBrush}"
+        FlowDirection="{Binding FlowDirection}">
     <Grid Margin="34">
         <Border Style="{StaticResource CardBorderStyle}" Padding="32">
             <ScrollViewer VerticalScrollBarVisibility="Auto">
                 <StackPanel>
-                    <Border Width="58" Height="58" CornerRadius="16" Background="{DynamicResource BrandPrimaryBrush}" HorizontalAlignment="Left">
+                    <Border Width="58" Height="58" CornerRadius="16" Background="{DynamicResource BrandPrimaryBrush}" HorizontalAlignment="Center">
                         <TextBlock Text="B" Foreground="White" FontSize="25" FontWeight="Bold"
                                    HorizontalAlignment="Center" VerticalAlignment="Center" />
                     </Border>
