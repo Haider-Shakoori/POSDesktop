@@ -14,6 +14,7 @@ using BusinessOS.POS.Desktop.Navigation;
 using BusinessOS.POS.Desktop.Pos;
 using BusinessOS.POS.Desktop.Purchasing;
 using BusinessOS.POS.Desktop.Terminals;
+using BusinessOS.POS.Desktop.Settings;
 using CommunityToolkit.Mvvm.ComponentModel;
 using WpfFlowDirection = System.Windows.FlowDirection;
 
@@ -38,7 +39,8 @@ public partial class MainWindowViewModel : ObservableObject
         DailyClosingViewModel closing,
         ExpensesViewModel expenses,
         ReportsViewModel reports,
-        TerminalsViewModel terminals)
+        TerminalsViewModel terminals,
+        SettingsViewModel settings)
     {
         _sessions = sessions;
         Dashboard = dashboard;
@@ -53,6 +55,7 @@ public partial class MainWindowViewModel : ObservableObject
         Expenses = expenses;
         Reports = reports;
         Terminals = terminals;
+        Settings = settings;
 
         var items = new[]
         {
@@ -120,6 +123,8 @@ public partial class MainWindowViewModel : ObservableObject
     public ReportsViewModel Reports { get; }
 
     public TerminalsViewModel Terminals { get; }
+
+    public SettingsViewModel Settings { get; }
 
     public AppearanceTheme[] Themes { get; }
 
