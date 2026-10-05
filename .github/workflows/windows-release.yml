@@ -1,0 +1,110 @@
+name: posdesktop-windows-release
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "packaging/windows/**"
+      - "scripts/build-windows-release.ps1"
+      - "scripts/test-windows-installer.ps1"
+      - ".release/windows-version.txt"
+      - ".github/workflows/windows-release.yml"
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "BusinessOS POS release version"
+        required: false
+        default: "0.1.0"
+
+permissions:
+  contents: read
+
+jobs:
+  windows-release:
+    runs-on: windows-latest
+    timeout-minutes: 45
+    env:
+      RELEASE_VERSION: ${{ inputs.version || '' }}
+      BUSINESSOS_POS_SIGNING_PFX_BASE64: ${{ secrets.BUSINESSOS_POS_SIGNING_PFX_BASE64 }}
+      BUSINESSOS_POS_SIGNING_PFX_PASSWORD: ${{ secrets.BUSINESSOS_POS_SIGNING_PFX_PASSWORD }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve version
+        id: version
+        shell: pwsh
+        run: |
+          $version = $env:RELEASE_VERSION
+          if ([string]::IsNullOrWhiteSpace($version)) {
+            $version = (Get-Content ".release/windows-version.txt" -Raw).Trim()
+          }
+          if ($version -notmatch '^\d+\.\d+\.\d+$') { throw "Version must use x.y.z format." }
+          "RELEASE_VERSION=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+
+      - name: Setup .NET 10
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Install Inno Setup
+        shell: pwsh
+        run: |
+          choco install innosetup -y --no-progress
+          if ($LASTEXITCODE -ne 0) { throw "Could not install Inno Setup." }
+
+      - name: Restore
+        run: dotnet restore BusinessOS.POS.sln
+
+      - name: Build
+        run: dotnet build BusinessOS.POS.sln --configuration Release --no-restore
+
+      - name: Unit tests
+        run: dotnet test tests/BusinessOS.POS.UnitTests/BusinessOS.POS.UnitTests.csproj --configuration Release --no-build --verbosity normal
+
+      - name: Vulnerable packages
+        run: dotnet list BusinessOS.POS.sln package --vulnerable --include-transitive
+
+      - name: Build Windows installers
+        shell: pwsh
+        run: ./scripts/build-windows-release.ps1 -Version $env:RELEASE_VERSION
+
+      - name: Installer smoke tests
+        shell: pwsh
+        run: ./scripts/test-windows-installer.ps1 -Version $env:RELEASE_VERSION
+
+      - name: Upload release bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: BusinessOS-POS-Windows-${{ steps.version.outputs.version }}
+          path: |
+            artifacts/windows/*Setup*.exe
+            artifacts/windows/*.zip
+            artifacts/windows/SHA256SUMS.txt
+            artifacts/windows/release-manifest.json
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload Standalone installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: BusinessOS-POS-Standalone-Setup-${{ steps.version.outputs.version }}
+          path: artifacts/windows/BusinessOS-POS-Standalone-Setup-${{ steps.version.outputs.version }}-win-x64.exe
+          if-no-files-found: error
+
+      - name: Upload Main Server installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: BusinessOS-POS-MainServer-Setup-${{ steps.version.outputs.version }}
+          path: artifacts/windows/BusinessOS-POS-MainServer-Setup-${{ steps.version.outputs.version }}-win-x64.exe
+          if-no-files-found: error
+
+      - name: Upload Client Terminal installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: BusinessOS-POS-ClientTerminal-Setup-${{ steps.version.outputs.version }}
+          path: artifacts/windows/BusinessOS-POS-ClientTerminal-Setup-${{ steps.version.outputs.version }}-win-x64.exe
+          if-no-files-found: error
