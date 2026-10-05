@@ -12,6 +12,8 @@ public interface IApplicationPaths
     string NetworkSecretsPath => Path.Combine(RootPath, "network-secrets.dat");
     string ServerCertificatePath => Path.Combine(RootPath, "local-server.pfx");
     string LanTerminalsPath => Path.Combine(RootPath, "lan-terminals.json");
+    string BackupsDirectory => Path.Combine(RootPath, "backups");
+    string UpdatesDirectory => Path.Combine(RootPath, "updates");
 
     void EnsureCreated();
 }
