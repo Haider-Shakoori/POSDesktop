@@ -30,8 +30,8 @@ public sealed class DesktopUiRegressionTests
                 StringComparison.Ordinal);
         }
 
-        Assert.Contains("""x:Key="UsersTemplate" """, xaml, StringComparison.Ordinal);
-        Assert.Contains("""Value="users" """, xaml, StringComparison.Ordinal);
+        Assert.Contains("""x:Key="UsersTemplate"""", xaml, StringComparison.Ordinal);
+        Assert.Contains("""Value="users"""", xaml, StringComparison.Ordinal);
     }
 
     [Fact]
@@ -66,8 +66,8 @@ public sealed class DesktopUiRegressionTests
         var ownerVm = File.ReadAllText(Path.Combine(
             root, "src", "BusinessOS.POS.Desktop", "Authentication", "OwnerSetupViewModel.cs"));
 
-        Assert.Contains("""FlowDirection="{Binding FlowDirection}" """, main, StringComparison.Ordinal);
-        Assert.Contains("""FlowDirection="{Binding FlowDirection}" """, ownerSetup, StringComparison.Ordinal);
+        Assert.Contains("""FlowDirection="{Binding FlowDirection}"""", main, StringComparison.Ordinal);
+        Assert.Contains("""FlowDirection="{Binding FlowDirection}"""", ownerSetup, StringComparison.Ordinal);
 
         Assert.Contains("RightToLeft", mainVm, StringComparison.Ordinal);
         Assert.Contains("RightToLeft", ownerVm, StringComparison.Ordinal);
