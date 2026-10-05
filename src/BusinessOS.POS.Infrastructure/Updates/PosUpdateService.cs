@@ -188,11 +188,26 @@ public sealed class PosUpdateService : IPosUpdateService
 
     public Process LaunchApplyAgent(string planPath)
     {
-        var exe = Path.Combine(AppContext.BaseDirectory, "Updater", "BusinessOS.POS.Updater.exe");
-        if (!File.Exists(exe))
-            throw new FileNotFoundException("BusinessOS POS updater agent is not installed.", exe);
+        var installedUpdater = Path.Combine(AppContext.BaseDirectory, "Updater");
+        var installedExe = Path.Combine(installedUpdater, "BusinessOS.POS.Updater.exe");
+        if (!File.Exists(installedExe))
+            throw new FileNotFoundException("BusinessOS POS updater agent is not installed.", installedExe);
 
-        return Process.Start(new ProcessStartInfo(exe, $"--apply \"{planPath}\"")
+        var runnerRoot = SafeChild(
+            _updatesRoot,
+            Path.Combine("agent", DateTimeOffset.UtcNow.ToString("yyyyMMddHHmmssfff")));
+        Directory.CreateDirectory(runnerRoot);
+
+        foreach (var file in Directory.EnumerateFiles(installedUpdater, "*", SearchOption.AllDirectories))
+        {
+            var relative = Path.GetRelativePath(installedUpdater, file);
+            var target = Path.Combine(runnerRoot, relative);
+            Directory.CreateDirectory(Path.GetDirectoryName(target)!);
+            File.Copy(file, target, overwrite: true);
+        }
+
+        var runnerExe = Path.Combine(runnerRoot, "BusinessOS.POS.Updater.exe");
+        return Process.Start(new ProcessStartInfo(runnerExe, $"--apply \"{planPath}\"")
         {
             UseShellExecute = true,
             Verb = OperatingSystem.IsWindows() ? "runas" : string.Empty,
