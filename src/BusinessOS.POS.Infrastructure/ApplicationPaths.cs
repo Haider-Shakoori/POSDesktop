@@ -16,6 +16,8 @@ public sealed class ApplicationPaths : IApplicationPaths
         NetworkSecretsPath = Path.Combine(RootPath, "network-secrets.dat");
         ServerCertificatePath = Path.Combine(RootPath, "pos-local-server.pfx");
         LanTerminalsPath = Path.Combine(RootPath, "lan-terminals.json");
+        BackupsDirectory = Path.Combine(RootPath, "backups");
+        UpdatesDirectory = Path.Combine(RootPath, "updates");
     }
 
     public string RootPath { get; }
@@ -25,6 +27,8 @@ public sealed class ApplicationPaths : IApplicationPaths
     public string NetworkSecretsPath { get; }
     public string ServerCertificatePath { get; }
     public string LanTerminalsPath { get; }
+    public string BackupsDirectory { get; }
+    public string UpdatesDirectory { get; }
 
     public void EnsureCreated() => Directory.CreateDirectory(RootPath);
 }
