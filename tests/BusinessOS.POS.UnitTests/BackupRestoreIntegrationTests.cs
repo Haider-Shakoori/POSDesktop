@@ -87,7 +87,10 @@ public sealed class BackupRestoreIntegrationTests
             var backupService = provider.GetRequiredService<ILocalBackupService>();
             var backup = await backupService.CreateAsync();
 
-            await File.AppendAllBytesAsync(backup.FullPath, [0x00]);
+            await using (var stream = new FileStream(backup.FullPath, FileMode.Append, FileAccess.Write, FileShare.None))
+            {
+                await stream.WriteAsync(new byte[] { 0x00 });
+            }
 
             var verification = await backupService.VerifyAsync(backup.FullPath);
             Assert.False(verification.IsValid);
