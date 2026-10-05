@@ -14,6 +14,7 @@
         xmlns:purchasing="clr-namespace:BusinessOS.POS.Desktop.Purchasing"
         xmlns:terminals="clr-namespace:BusinessOS.POS.Desktop.Terminals"
         xmlns:settings="clr-namespace:BusinessOS.POS.Desktop.Settings"
+        xmlns:users="clr-namespace:BusinessOS.POS.Desktop.Users"
         Title="BusinessOS POS"
         Width="1440"
         Height="900"
@@ -75,6 +76,10 @@
 
         <DataTemplate x:Key="SettingsTemplate">
             <settings:SettingsView DataContext="{Binding DataContext.Settings, RelativeSource={RelativeSource AncestorType=Window}}" />
+        </DataTemplate>
+
+        <DataTemplate x:Key="UsersTemplate">
+            <users:UsersView DataContext="{Binding DataContext.Users, RelativeSource={RelativeSource AncestorType=Window}}" />
         </DataTemplate>
 
         <DataTemplate x:Key="ModuleTemplate">
@@ -266,6 +271,9 @@
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding SelectedNavigation.Key}" Value="settings">
                                     <Setter Property="ContentTemplate" Value="{StaticResource SettingsTemplate}" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SelectedNavigation.Key}" Value="users">
+                                    <Setter Property="ContentTemplate" Value="{StaticResource UsersTemplate}" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>

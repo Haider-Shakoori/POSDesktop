@@ -21,6 +21,7 @@ using BusinessOS.POS.Desktop.Purchasing;
 using BusinessOS.POS.Desktop.Reports;
 using BusinessOS.POS.Desktop.Sales;
 using BusinessOS.POS.Desktop.Settings;
+using BusinessOS.POS.Desktop.Users;
 using BusinessOS.POS.Desktop.Terminals;
 using BusinessOS.POS.Infrastructure;
 using BusinessOS.POS.Infrastructure.Networking;
@@ -86,6 +87,7 @@ public partial class App : System.Windows.Application
                     services.AddTransient<ReportsViewModel>();
                     services.AddTransient<TerminalsViewModel>();
                     services.AddTransient<SettingsViewModel>();
+                    services.AddTransient<UsersViewModel>();
                     services.AddTransient<ExpensesViewModel>();
                     services.AddSingleton<IReceiptPrintService, WpfReceiptPrintService>();
                     services.AddTransient<MainWindowViewModel>();
