@@ -18,6 +18,9 @@ using BusinessOS.POS.Infrastructure;
 using BusinessOS.POS.Infrastructure.Networking;
 using BusinessOS.POS.Application.Abstractions.Networking;
 using BusinessOS.POS.Desktop.Terminals;
+using BusinessOS.POS.Desktop.Settings;
+using BusinessOS.POS.Application.Abstractions.Updates;
+using BusinessOS.POS.Infrastructure.Updates;
 using BusinessOS.POS.Persistence;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -43,6 +46,14 @@ public partial class App : System.Windows.Application
                     services.AddSingleton<INetworkSecretStore, WindowsNetworkSecretStore>();
                     services.AddSingleton<ILanTerminalRegistry, FileLanTerminalRegistry>();
                     services.AddSingleton<ILanClientService, LanClientService>();
+                    services.AddSingleton<IPosUpdateService>(sp =>
+                    {
+                        var paths = sp.GetRequiredService<IApplicationPaths>();
+                        var options = new UpdateOptions(
+                            Environment.GetEnvironmentVariable("BUSINESSOS_POS_UPDATE_MANIFEST_URL") ?? string.Empty,
+                            Environment.GetEnvironmentVariable("BUSINESSOS_POS_UPDATE_PUBLIC_KEY_PEM") ?? string.Empty);
+                        return new PosUpdateService(new HttpClient(), options, paths.UpdatesDirectory);
+                    });
                     services.AddBusinessOSPosPersistence();
                     services.AddTransient<LoginViewModel>();
                     services.AddTransient<OwnerSetupViewModel>();
@@ -57,6 +68,7 @@ public partial class App : System.Windows.Application
                     services.AddTransient<DashboardViewModel>();
                     services.AddTransient<ReportsViewModel>();
                     services.AddTransient<TerminalsViewModel>();
+                    services.AddTransient<SettingsViewModel>();
                     services.AddTransient<ExpensesViewModel>();
                     services.AddSingleton<IReceiptPrintService, WpfReceiptPrintService>();
                     services.AddTransient<MainWindowViewModel>();
